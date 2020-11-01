@@ -1,2 +1,2 @@
-# sailtrack-core
-Code for the central node.
+# SailTrack Core
+Repository containing the code for the central node of the SailTrack system.
