@@ -1,2 +1,2 @@
 # SailTrack Core
-Repository containing the code for the central node of the SailTrack system.
+Repository containing the code for the central module of the SailTrack system.
