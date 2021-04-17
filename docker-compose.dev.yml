@@ -1,7 +1,23 @@
 services:
-  mqtt:
+  mosquitto:
     image: eclipse-mosquitto
     command: mosquitto -c /mosquitto-no-auth.conf
     ports:
       - "1883:1883"
-      - "9001:9001"
+  influxdb:
+    image: influxdb
+    environment:
+      - DOCKER_INFLUXDB_INIT_MODE=setup
+      - DOCKER_INFLUXDB_INIT_USERNAME=admin
+      - DOCKER_INFLUXDB_INIT_PASSWORD=metisvelaunipd
+      - DOCKER_INFLUXDB_INIT_ORG=metis-vela-unipd
+      - DOCKER_INFLUXDB_INIT_BUCKET=sailtrack
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=sailtracktoken
+    ports:
+      - "8086:8086"
+  telegraf:
+    image: telegraf
+    volumes:
+      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
+    depends_on:
+      - influxdb
