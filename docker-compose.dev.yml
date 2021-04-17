@@ -1,7 +1,9 @@
 services:
   mosquitto:
     image: eclipse-mosquitto
-    command: mosquitto -c /mosquitto-no-auth.conf
+    volumes:
+      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
+      - ./mosquitto/password_file:/etc/mosquitto/password_file
     ports:
       - "1883:1883"
   influxdb:
@@ -9,10 +11,10 @@ services:
     environment:
       - DOCKER_INFLUXDB_INIT_MODE=setup
       - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=metisvelaunipd
+      - DOCKER_INFLUXDB_INIT_PASSWORD=metisvela
       - DOCKER_INFLUXDB_INIT_ORG=metis-vela-unipd
       - DOCKER_INFLUXDB_INIT_BUCKET=sailtrack
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=sailtracktoken
+      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=admintoken
     ports:
       - "8086:8086"
   telegraf:
@@ -21,3 +23,7 @@ services:
       - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
     depends_on:
       - influxdb
+  grafana:
+    image: grafana/grafana
+    ports:
+    - "3000:3000"
