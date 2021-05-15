@@ -7,17 +7,17 @@
 #------------------------------------------------------------------------------------------------------
 # By setting this to "1" you accept the DietPi GPLv2 license and skip the related interactive dialog.
 # - Full license text: /boot/dietpi-LICENSE.txt
-AUTO_SETUP_ACCEPT_LICENSE=0
+AUTO_SETUP_ACCEPT_LICENSE=1
 
 ##### Language/Regional Options #####
 # Locale: eg: "en_GB.UTF-8" / "de_DE.UTF-8" | One entry and UTF-8 ONLY!
 AUTO_SETUP_LOCALE=C.UTF-8
 
 # Keyboard Layout eg: "gb" / "us" / "de" / "fr"
-AUTO_SETUP_KEYBOARD_LAYOUT=gb
+AUTO_SETUP_KEYBOARD_LAYOUT=us
 
 # Timezone eg: "Europe/London" / "America/New_York" | Full list (TZ*): https://en.wikipedia.org/wiki/List_of_tz_database_time_zones
-AUTO_SETUP_TIMEZONE=Europe/London
+AUTO_SETUP_TIMEZONE=Europe/Rome
 
 ##### Network Options #####
 # Enable Ethernet or WiFi adapter: 1=enable | 0=disable
@@ -31,7 +31,7 @@ AUTO_SETUP_NET_WIFI_ENABLED=0
 AUTO_SETUP_NET_ETH_FORCE_SPEED=0
 
 # WiFi country code: 2 uppercase character value (e.g. GB US DE JP): https://en.wikipedia.org/wiki/ISO_3166-1_alpha-2
-AUTO_SETUP_NET_WIFI_COUNTRY_CODE=GB
+AUTO_SETUP_NET_WIFI_COUNTRY_CODE=IT
 
 # Enter your Static Network details below, if applicable.
 AUTO_SETUP_NET_USESTATIC=0
@@ -50,7 +50,7 @@ AUTO_SETUP_SWAPFILE_SIZE=1
 AUTO_SETUP_SWAPFILE_LOCATION=/var/swap
 
 # Set to "1" to disable HDMI output (and GPU/VPU where supported) for supported devices: RPi, Odroid C1, Odroid C2
-AUTO_SETUP_HEADLESS=0
+AUTO_SETUP_HEADLESS=1
 
 # Unmask (enable) systemd-logind service (including dbus), which is masked by default on DietPi
 AUTO_UNMASK_LOGIND=0
@@ -100,7 +100,7 @@ AUTO_SETUP_AUTOSTART_LOGIN_USER=root
 # On first login, run update, initial setup and software installs without any user input
 # - Setting this to "1" is required for below settings to take effect
 # - It is HIGHLY recommended to also set CONFIG_BOOT_WAIT_FOR_NETWORK=2, to force infinite wait for network connection during boot and prevent connection timeout errors.
-AUTO_SETUP_AUTOMATED=0
+AUTO_SETUP_AUTOMATED=1
 
 # Global Password to be applied for the system
 # - Affects "root" and "dietpi" users login passwords and is used by dietpi-software as default for software installs which require a password.
@@ -114,13 +114,15 @@ AUTO_SETUP_GLOBAL_PASSWORD=dietpi
 # - DietPi will automatically install all pre-reqs (e.g. ALSA/X11 for desktops etc)
 # - E.g. the following (without the leading "#") will install the LXDE desktop automatically on first boot:
 #AUTO_SETUP_INSTALL_SOFTWARE_ID=23
+# Python 3 + Pip
+AUTO_SETUP_INSTALL_SOFTWARE_ID=130
 
 #------------------------------------------------------------------------------------------------------
 ##### Misc DietPi program settings #####
 #------------------------------------------------------------------------------------------------------
 # DietPi-Survey: 1=opt in | 0=opt out | -1=ask on first call
 # - https://dietpi.com/docs/dietpi_tools/#miscellaneous (see tab 'DietPi Survey')
-SURVEY_OPTED_IN=-1
+SURVEY_OPTED_IN=0
 
 #------------------------------------------------------------------------------------------------------
 ##### DietPi-Config settings #####
@@ -152,7 +154,7 @@ CONFIG_PROXY_USERNAME=
 CONFIG_PROXY_PASSWORD=
 
 # Delay boot until network is established: 0=disabled | 1=10 second wait max (default) | 2=infinite wait
-CONFIG_BOOT_WAIT_FOR_NETWORK=1
+CONFIG_BOOT_WAIT_FOR_NETWORK=2
 
 # Connection timeout in seconds, before G_CHECK_URL assumes the URL is dead. Increase if you have a "flaky" connection or slow DNS resolver.
 # - Set this to "0" to allow unlimited time, however this is not recommended to avoid unlimited hanging background scripts, e.g. daily DietPi update check.
@@ -179,7 +181,7 @@ CONFIG_CHECK_APT_UPDATES=1
 CONFIG_NTP_MODE=2
 
 # Serial Console: Set to 0 if you do not require serial console.
-CONFIG_SERIAL_CONSOLE_ENABLE=1
+CONFIG_SERIAL_CONSOLE_ENABLE=0
 
 # Sound card
 CONFIG_SOUNDCARD=none
