@@ -116,6 +116,8 @@ AUTO_SETUP_GLOBAL_PASSWORD=dietpi
 #AUTO_SETUP_INSTALL_SOFTWARE_ID=23
 # Python 3 + Pip
 AUTO_SETUP_INSTALL_SOFTWARE_ID=130
+# Mosquitto
+AUTO_SETUP_INSTALL_SOFTWARE_ID=123
 
 #------------------------------------------------------------------------------------------------------
 ##### Misc DietPi program settings #####
