@@ -1,29 +1,11 @@
 services:
-  mosquitto:
-    image: eclipse-mosquitto
+  dockerpi:
+    image: lukechilds/dockerpi:vm
     volumes:
-      - ./mosquitto/mosquitto.conf:/mosquitto/config/mosquitto.conf
-      - ./mosquitto/passwd:/etc/mosquitto/passwd
+      - ./dietpi/DietPi_RPi-ARMv6-Buster.img:/sdcard/filesystem.img
     ports:
-      - "1883:1883"
-  influxdb:
-    image: influxdb
-    environment:
-      - DOCKER_INFLUXDB_INIT_MODE=setup
-      - DOCKER_INFLUXDB_INIT_USERNAME=admin
-      - DOCKER_INFLUXDB_INIT_PASSWORD=metisvela
-      - DOCKER_INFLUXDB_INIT_ORG=metis-vela-unipd
-      - DOCKER_INFLUXDB_INIT_BUCKET=sailtrack
-      - DOCKER_INFLUXDB_INIT_ADMIN_TOKEN=admintoken
-    ports:
-      - "8086:8086"
-  telegraf:
-    image: telegraf
-    volumes:
-      - ./telegraf/telegraf.conf:/etc/telegraf/telegraf.conf
-    depends_on:
-      - influxdb
-  grafana:
-    image: grafana/grafana
-    ports:
-    - "3000:3000"
+      - "22:5022"     # SSH
+      - "1883:1883"   # MQTT
+      - "3000:3000"   # Grafana
+    sysctls:
+      - net.ipv4.ping_group_range=0 2147483647
