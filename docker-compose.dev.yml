@@ -1,11 +1,15 @@
 services:
   dockerpi:
+    build:
+      context: https://github.com/matteocarnelos/dockerpi.git
+      target: dockerpi-vm
     image: lukechilds/dockerpi:vm
     volumes:
-      - ./dietpi/DietPi_RPi-ARMv6-Buster.img:/sdcard/filesystem.img
+      - ./dietpi/filesystem.img:/sdcard/filesystem.img
     ports:
       - "22:5022"     # SSH
       - "1883:1883"   # MQTT
-      - "3000:3000"   # Grafana
+    environment:
+      - HOSTFWD=tcp::1883-:1883
     sysctls:
       - net.ipv4.ping_group_range=0 2147483647
