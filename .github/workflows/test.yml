@@ -13,6 +13,6 @@ jobs:
         with:
           name: sailtrackd
           version: 0.0.1
-          arch: arm
+          arch: armv7
           format: deb
           package: package.yaml
