@@ -118,6 +118,8 @@ AUTO_SETUP_GLOBAL_PASSWORD=dietpi
 AUTO_SETUP_INSTALL_SOFTWARE_ID=130
 # Mosquitto
 AUTO_SETUP_INSTALL_SOFTWARE_ID=123
+# InfluxDB
+AUTO_SETUP_INSTALL_SOFTWARE_ID=74
 
 #------------------------------------------------------------------------------------------------------
 ##### Misc DietPi program settings #####
