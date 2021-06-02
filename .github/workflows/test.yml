@@ -9,7 +9,7 @@ jobs:
       - uses: actions/checkout@v2
         with:
           ref: 'feature/package'
-      - uses: kentik/pkg@v1
+      - uses: kentik/pkg@v1.0.0-rc7
         with:
           name: sailtrackd
           version: 0.0.1
