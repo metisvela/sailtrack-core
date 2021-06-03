@@ -1,4 +1,5 @@
 from setuptools import setup
+from glob import glob
 
 setup(
     name='sailtrack-core',
@@ -8,5 +9,11 @@ setup(
     license='GPL-3.0',
     author='Métis Vela Unipd',
     author_email='matteo.carnelos@studenti.unipd.it',
-    description='Core package of the SailTrack system.'
+    description='Core package of the SailTrack system.',
+    install_requires=[
+
+    ],
+    data_files=[
+        ('/etc/systemd/system', glob('systemd/*'))
+    ]
 )
