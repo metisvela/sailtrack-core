@@ -7,7 +7,7 @@ services:
     volumes:
       - ./dietpi/filesystem.img:/sdcard/filesystem.img
     ports:
-      - "22:22"     # SSH
+      - "22:22"       # SSH
       - "1883:1883"   # MQTT
     environment:
       - HOSTFWD=tcp::22-:22 tcp::1883-:1883
