@@ -23,7 +23,7 @@ jobs:
       - name: Mount image
         run: |
           DEV=$(sudo losetup --show -f -P $DIETPI_IMAGE_NAME/$DIETPI_IMAGE_NAME.img)
-          PART=$DEVp1
+          PART=${DEV}p1
           MOUNT=/mnt/$(basename $PART)
           echo "DEV=$DEV" >> $GITHUB_ENV
           echo "PART=$PART" >> $GITHUB_ENV
