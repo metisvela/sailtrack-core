@@ -44,12 +44,9 @@ jobs:
           echo -e "SHA1:\t$(sha1sum ${IMAGE_NAME}/${IMAGE_NAME}.img | mawk '{print $1}')" >> ${IMAGE_NAME}/hash.txt
           echo -e "SHA256:\t$(sha256sum ${IMAGE_NAME}/${IMAGE_NAME}.img | mawk '{print $1}')" >> ${IMAGE_NAME}/hash.txt
           
-      - name: Create archive
-        run: 7z a ${IMAGE_NAME}.7z ${IMAGE_NAME}/*
-          
       - name: Upload image
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v2.2.3
         with:
-          path: ${{ env.IMAGE_NAME }}.7z
-          name: ${{ env.IMAGE_NAME }}.7z
+          path: ${{ env.IMAGE_NAME }}/*
+          name: ${{ env.IMAGE_NAME }}
           
