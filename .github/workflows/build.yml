@@ -1,0 +1,55 @@
+name: Build image
+
+on: workflow_dispatch
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      IMAGE_NAME: DietPi_RPi-ARMv6-Buster
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Download compressed image
+        run: wget https://dietpi.com/downloads/images/${IMAGE_NAME}.7z
+          
+      - name: Extract image
+        run: 7z e -o${IMAGE_NAME} ${IMAGE_NAME}.7z
+        
+      - name: Mount image
+        run: |
+          DEV=$(sudo losetup --show -f -P ${IMAGE_NAME}/${IMAGE_NAME}.img)
+          PART=${DEV}p1
+          MOUNT=/mnt/$(basename $PART)
+          echo "DEV=$DEV" >> $GITHUB_ENV
+          echo "PART=$PART" >> $GITHUB_ENV
+          echo "MOUNT=$MOUNT" >> $GITHUB_ENV
+          sudo mkdir $MOUNT
+          sudo mount $PART $MOUNT
+          
+      - name: Copy files
+        run: sudo cp dietpi/dietpi.txt $MOUNT
+        
+      - name: Unmount image
+        run: |
+          sudo umount $MOUNT
+          sudo losetup -d $DEV
+          
+      - name: Update hashes
+        run: |
+          echo -e "FILE:\t${IMAGE_NAME}.img" > ${IMAGE_NAME}/hash.txt
+          echo -e "DATE:\t$(date)" >> ${IMAGE_NAME}/hash.txt
+          echo -e "MD5:\t$(md5sum ${IMAGE_NAME}/${IMAGE_NAME}.img | mawk '{print $1}')" >> ${IMAGE_NAME}/hash.txt
+          echo -e "SHA1:\t$(sha1sum ${IMAGE_NAME}/${IMAGE_NAME}.img | mawk '{print $1}')" >> ${IMAGE_NAME}/hash.txt
+          echo -e "SHA256:\t$(sha256sum ${IMAGE_NAME}/${IMAGE_NAME}.img | mawk '{print $1}')" >> ${IMAGE_NAME}/hash.txt
+          
+      - name: Create archive
+        run: 7z a ${IMAGE_NAME}.7z ${IMAGE_NAME}/*
+          
+      - name: Upload image
+        uses: actions/upload-artifact@v2
+        with:
+          path: ${{ env.IMAGE_NAME }}.7z
+          name: ${{ env.IMAGE_NAME }}.7z
+          
