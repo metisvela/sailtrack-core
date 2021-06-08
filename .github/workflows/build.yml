@@ -33,7 +33,7 @@ jobs:
 
       - name: Copy files and directories
         run: |
-          sudo cp -rT sailtrack $MOUNT/
+          sudo cp -rT sailtrack $MOUNT/sailtrack
           sudo cp -rT sailtrack/dietpi/ $MOUNT/
 
       - name: Unmount image
