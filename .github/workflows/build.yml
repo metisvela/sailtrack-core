@@ -18,11 +18,13 @@ jobs:
         run: wget https://dietpi.com/downloads/images/$DIETPI_IMAGE_NAME.7z
 
       - name: Extract image
-        run: 7z e -o$DIETPI_IMAGE_NAME $DIETPI_IMAGE_NAME.7z
+        run: |
+          7z e -o$DIETPI_IMAGE_NAME $DIETPI_IMAGE_NAME.7z
+          mv ${DIETPI_IMAGE_NAME}/${DIETPI_IMAGE_NAME}.img ${DIETPI_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img
 
       - name: Mount image
         run: |
-          DEV=$(sudo losetup --show -f -P $DIETPI_IMAGE_NAME/$DIETPI_IMAGE_NAME.img)
+          DEV=$(sudo losetup --show -f -P $DIETPI_IMAGE_NAME/$OUTPUT_IMAGE_NAME.img)
           PART=${DEV}p1
           MOUNT=/mnt/$(basename $PART)
           echo "DEV=$DEV" >> $GITHUB_ENV
@@ -44,6 +46,6 @@ jobs:
       - name: Upload image
         uses: actions/upload-artifact@v2
         with:
-          path: ${{ env.DIETPI_IMAGE_NAME }}/${{ env.DIETPI_IMAGE_NAME }}.img
+          path: ${{ env.DIETPI_IMAGE_NAME }}/${{ env.OUTPUT_IMAGE_NAME }}.img
           name: ${{ env.OUTPUT_IMAGE_NAME }}.img
 
