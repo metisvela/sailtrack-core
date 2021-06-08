@@ -9,40 +9,41 @@ jobs:
       DIETPI_IMAGE_NAME: DietPi_RPi-ARMv6-Buster
       OUTPUT_IMAGE_NAME: SailTrack_Core-ARMv6-Buster
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+        with:
+          path: sailtrack
+
       - name: Download compressed image
-        run: wget https://dietpi.com/downloads/images/${DIETPI_IMAGE_NAME}.7z
-          
+        run: wget https://dietpi.com/downloads/images/$DIETPI_IMAGE_NAME.7z
+
       - name: Extract image
-        run: 7z e -o${DIETPI_IMAGE_NAME} ${DIETPI_IMAGE_NAME}.7z
-        
+        run: 7z e -o$DIETPI_IMAGE_NAME $DIETPI_IMAGE_NAME.7z
+
       - name: Mount image
         run: |
-          DEV=$(sudo losetup --show -f -P ${DIETPI_IMAGE_NAME}/${DIETPI_IMAGE_NAME}.img)
-          PART=${DEV}p1
+          DEV=$(sudo losetup --show -f -P $DIETPI_IMAGE_NAME/$DIETPI_IMAGE_NAME.img)
+          PART=$DEVp1
           MOUNT=/mnt/$(basename $PART)
           echo "DEV=$DEV" >> $GITHUB_ENV
           echo "PART=$PART" >> $GITHUB_ENV
           echo "MOUNT=$MOUNT" >> $GITHUB_ENV
           sudo mkdir $MOUNT
           sudo mount $PART $MOUNT
-          
-      - name: Copy repository files
-        uses: actions/checkout@v2
-        with:
-          path: ${{ env.MOUNT }}/sailtrack
 
-      - name: Copy DietPi files
+      - name: Copy files and directories
         run: |
-          sudo cp -rT ${MOUNT}/sailtrack/dietpi ${MOUNT}/
-        
+          sudo cp -rT sailtrack $MOUNT/
+          sudo cp -rT sailtrack/dietpi/ $MOUNT/
+
       - name: Unmount image
         run: |
           sudo umount $MOUNT
           sudo losetup -d $DEV
-          
+
       - name: Upload image
         uses: actions/upload-artifact@v2
         with:
           path: ${{ env.DIETPI_IMAGE_NAME }}/${{ env.DIETPI_IMAGE_NAME }}.img
           name: ${{ env.OUTPUT_IMAGE_NAME }}.img
-          
+
