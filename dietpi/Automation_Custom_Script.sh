@@ -2,7 +2,7 @@ cd /boot/sailtrack || exit
 
 # Install and configure telegraf
 apt install telegraf
-ln telegraf/* /etc/telegraf/telegraf.d
+ln -s telegraf/* /etc/telegraf/telegraf.d
 echo "+ telegraf" >> /boot/dietpi/.dietpi-services_include_exclude
 
 # Install and configure x708
