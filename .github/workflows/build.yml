@@ -9,9 +9,6 @@ jobs:
       DIETPI_IMAGE_NAME: DietPi_RPi-ARMv6-Buster
       OUTPUT_IMAGE_NAME: SailTrack_Core-ARMv6-Buster
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
       - name: Download compressed image
         run: wget https://dietpi.com/downloads/images/${DIETPI_IMAGE_NAME}.7z
           
@@ -29,10 +26,14 @@ jobs:
           sudo mkdir $MOUNT
           sudo mount $PART $MOUNT
           
-      - name: Copy files and directories
+      - name: Copy repository files
+        uses: actions/checkout@v2
+        with:
+          path: ${{ env.MOUNT }}/sailtrack
+
+      - name: Copy DietPi files
         run: |
-          sudo cp -T dietpi ${MOUNT}/
-          sudo cp -a . ${MOUNT}/sailtrack/
+          sudo cp -rT ${MOUNT}/sailtrack/dietpi ${MOUNT}/
         
       - name: Unmount image
         run: |
@@ -40,7 +41,7 @@ jobs:
           sudo losetup -d $DEV
           
       - name: Upload image
-        uses: actions/upload-artifact@v2.2.3
+        uses: actions/upload-artifact@v2
         with:
           path: ${{ env.DIETPI_IMAGE_NAME }}/${{ env.DIETPI_IMAGE_NAME }}.img
           name: ${{ env.OUTPUT_IMAGE_NAME }}.img
