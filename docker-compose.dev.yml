@@ -5,7 +5,7 @@ services:
       target: dockerpi-vm
     image: lukechilds/dockerpi:vm
     volumes:
-      - ./dietpi/filesystem.img:/sdcard/filesystem.img
+      - ./filesystem.img:/sdcard/filesystem.img
     ports:
       - "22:22"       # SSH
       - "1883:1883"   # MQTT
