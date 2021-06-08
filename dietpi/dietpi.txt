@@ -65,7 +65,7 @@ AUTO_UNMASK_LOGIND=0
 # - Option 0 = Copy your script to /boot/Automation_Custom_Script.sh and it will be executed automatically.
 # - Option 1 = Host your script online, then use e.g. AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://myweb.com/myscript.sh and it will be downloaded and executed automatically.
 # - Executed script log: /var/tmp/dietpi/logs/dietpi-automation_custom_script.log
-AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/metis-vela-unipd/sailtrack-core/main/dietpi/setup.sh
+AUTO_SETUP_CUSTOM_SCRIPT_EXEC=https://raw.githubusercontent.com/metis-vela-unipd/sailtrack-core/develop/dietpi/postscript.sh
 
 # Restore a DietPi-Backup on first boot: 0 => disable | 1 => interactive restore (show list of found backups) | 2 => non-interactive restore (restore first found backup)
 # - Simply attach the drive/disk/stick with contains the backup. All attached drives will be mounted temporarily and searched automatically.
@@ -114,12 +114,10 @@ AUTO_SETUP_GLOBAL_PASSWORD=dietpi
 # - DietPi will automatically install all pre-reqs (e.g. ALSA/X11 for desktops etc)
 # - E.g. the following (without the leading "#") will install the LXDE desktop automatically on first boot:
 #AUTO_SETUP_INSTALL_SOFTWARE_ID=23
-# Python 3 + Pip
-AUTO_SETUP_INSTALL_SOFTWARE_ID=130
-# Mosquitto
-AUTO_SETUP_INSTALL_SOFTWARE_ID=123
-# InfluxDB
-AUTO_SETUP_INSTALL_SOFTWARE_ID=74
+AUTO_SETUP_INSTALL_SOFTWARE_ID=130  # Python 3 + Pip
+AUTO_SETUP_INSTALL_SOFTWARE_ID=72   # I2C
+AUTO_SETUP_INSTALL_SOFTWARE_ID=123  # Mosquitto
+AUTO_SETUP_INSTALL_SOFTWARE_ID=74   # InfluxDB
 
 #------------------------------------------------------------------------------------------------------
 ##### Misc DietPi program settings #####
