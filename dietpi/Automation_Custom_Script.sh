@@ -14,5 +14,3 @@ echo "alias x708off='sudo /boot/sailtrack/x708/softsd.sh'" >> /etc/bash.bashrc
 pip3 install -r /boot/sailtrack/requirements.txt
 systemctl link /boot/sailtrack/systemd/*
 echo "+ sailtrackd" >> /boot/dietpi/.dietpi-services_include_exclude
-
-reboot
