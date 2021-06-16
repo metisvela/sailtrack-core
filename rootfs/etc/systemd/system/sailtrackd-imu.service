@@ -1,0 +1,6 @@
+[Unit]
+Description=SailTrackd-IMU
+
+[Service]
+
+[Install]

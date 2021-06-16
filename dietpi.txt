@@ -213,9 +213,9 @@ CONFIG_PREFER_IPV4=1
 
 # APT mirrors which are applied to /etc/apt/sources.list | Values here will also be applied during 1st run setup
 # - Raspbian: https://www.raspbian.org/RaspbianMirrors
-CONFIG_APT_RASPBIAN_MIRROR=http://raspbian.raspberrypi.org/raspbian/
+CONFIG_APT_RASPBIAN_MIRROR=https://raspbian.mirror.garr.it/mirrors/raspbian/raspbian/
 # - Debian: https://www.debian.org/mirror/official#list
-CONFIG_APT_DEBIAN_MIRROR=https://deb.debian.org/debian/
+CONFIG_APT_DEBIAN_MIRROR=https://debian.mirror.garr.it/debian/
 
 # NTP mirror, applied to /etc/ntp.conf
 # - For a full list, please see: https://www.ntppool.org/zone/@

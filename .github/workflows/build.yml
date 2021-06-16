@@ -12,7 +12,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v2
         with:
-          path: sailtrack
+          path: sailtrack-core
 
       - name: Download compressed image
         run: wget https://dietpi.com/downloads/images/$DIETPI_IMAGE_NAME.7z
@@ -35,8 +35,9 @@ jobs:
 
       - name: Copy files and directories
         run: |
-          sudo cp -rT sailtrack $MOUNT/sailtrack
-          sudo cp -rT sailtrack/dietpi/ $MOUNT/
+          mv sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE
+          mv sailtrack-core/README.md sailtrack-core/sailtrack-README.md
+          sudo cp -rT sailtrack-core/* $MOUNT
 
       - name: Unmount image
         run: |
