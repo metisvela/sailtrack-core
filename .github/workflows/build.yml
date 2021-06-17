@@ -35,7 +35,7 @@ jobs:
 
       - name: Copy files and directories
         run: |
-          mv sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE
+          mv sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE.txt
           mv sailtrack-core/README.md sailtrack-core/sailtrack-README.md
           sudo rsync -rt --exclude=".*" sailtrack-core/ $MOUNT
 
