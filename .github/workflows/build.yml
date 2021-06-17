@@ -37,7 +37,7 @@ jobs:
         run: |
           mv sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE
           mv sailtrack-core/README.md sailtrack-core/sailtrack-README.md
-          sudo rsync -rltgoD --exclude=".*" sailtrack-core/ $MOUNT
+          sudo rsync -rt --exclude=".*" sailtrack-core/ $MOUNT
 
       - name: Unmount image
         run: |
