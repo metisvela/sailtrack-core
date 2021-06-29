@@ -35,8 +35,9 @@ jobs:
 
       - name: Copy files and directories
         run: |
-          cp sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE.txt
-          cp sailtrack-core/README.md sailtrack-core/sailtrack-README.md
+          cp sailtrack-core/README.md ${OUTPUT_IMAGE_NAME}/README.md
+          mv sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE.txt
+          mv sailtrack-core/README.md sailtrack-core/sailtrack-README.md
           sudo rsync -rt --exclude=".*" sailtrack-core/ $MOUNT
 
       - name: Unmount image
@@ -46,14 +47,11 @@ jobs:
 
       - name: Update hashes
         run: |
-          echo -e "FILE:\t${OUTPUT_IMAGE_NAME}.img" > ${OUTPUT_IMAGE_NAME}/hash.txt
-          echo -e "DATE:\t$(date)" >> ${OUTPUT_IMAGE_NAME}/hash.txt
-          echo -e "MD5:\t$(md5sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
-          echo -e "SHA1:\t$(sha1sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "FILE:\t\t${OUTPUT_IMAGE_NAME}.img" > ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "DATE:\t\t$(date)" >> ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "MD5:\t\t$(md5sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "SHA1:\t\t$(sha1sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
           echo -e "SHA256:\t$(sha256sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
-
-      - name: Update README
-        run: cp sailtrack-core/README.md ${OUTPUT_IMAGE_NAME}/README.md
 
       - name: Upload image
         uses: actions/upload-artifact@v2
