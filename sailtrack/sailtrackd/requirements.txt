@@ -1,0 +1,2 @@
+paho-mqtt~=1.5.1
+timeloop~=1.0.2
