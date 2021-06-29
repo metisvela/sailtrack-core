@@ -34,9 +34,6 @@ for i in 1 1 1 0 0 1 0 0 0 0 0 0 0 0; do
   echo "aENABLED[$((index++))]=$i" >> /boot/dietpi/.dietpi-banner
 done
 
-# Accept DietPi License
-G_EXEC rm /var/lib/dietpi/license.txt
-
 # Remove DietPi-VPN
 G_EXEC rm /etc/systemd/system/dietpi-vpn.service
 
