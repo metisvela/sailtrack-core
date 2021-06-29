@@ -16,19 +16,17 @@ G_EXEC pip3 install -r /boot/sailtrack/sailtrackd/requirements.txt
 
 # Merge filesystem
 G_EXEC cp -rT /boot/rootfs /
+G_EXEC rm -r /boot/rootfs
 
 # Enable services
+for s in /etc/systemd/system/sailtrack*.service; do G_EXEC systemctl enable "$s"; done
 G_CONFIG_INJECT "+ telegraf" "+ telegraf" /boot/dietpi/.dietpi-services_include_exclude
-/boot/dietpi/dietpi-services dietpi_controlled telegraf
-for s in /boot/rootfs/etc/systemd/system/*.service; do
-  service=$(basename "$s" .service)
-  G_EXEC systemctl enable "$service"
-  G_CONFIG_INJECT "+ $service" "+ $service" /boot/dietpi/.dietpi-services_include_exclude
-  /boot/dietpi/dietpi-services dietpi_controlled "$service"
+for s in /etc/systemd/system/sailtrack-sailtrackd*.service; do
+  servicename=$(basename "$s" .service)
+  G_CONFIG_INJECT "+ $servicename" "+ $servicename" /boot/dietpi/.dietpi-services_include_exclude
+  /boot/dietpi/dietpi-services dietpi_controlled "$servicename"
 done
-
-# Remove merged filesystem
-G_EXEC rm -r /boot/rootfs
+/boot/dietpi/dietpi-services dietpi_controlled telegraf
 
 # Configure DietPi Banner
 index=0

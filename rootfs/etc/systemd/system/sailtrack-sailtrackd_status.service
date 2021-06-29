@@ -1,0 +1,6 @@
+[Unit]
+Description=Sailtrack - Sailtrackd Status
+
+[Service]
+
+[Install]
