@@ -11,7 +11,7 @@ G_EXEC sed -i "/systemd/,/fi/s/^/#/" /lib/udev/hwclock-set
 G_EXEC sed -i "/--systz/s/^/#/" /lib/udev/hwclock-set
 
 # Install packages
-G_AGI install telegraf
+G_AGI telegraf
 G_EXEC pip3 install -r /boot/sailtrack/sailtrackd/requirements.txt
 
 # Merge filesystem
@@ -21,7 +21,7 @@ G_EXEC rm -r /boot/rootfs
 # Enable services
 for s in /etc/systemd/system/sailtrack*.service; do G_EXEC systemctl enable "$s"; done
 G_CONFIG_INJECT "+ telegraf" "+ telegraf" /boot/dietpi/.dietpi-services_include_exclude
-for s in /etc/systemd/system/sailtrack-sailtrackd*.service; do
+for s in /etc/systemd/system/sailtrackd*.service; do
   servicename=$(basename "$s" .service)
   G_CONFIG_INJECT "+ $servicename" "+ $servicename" /boot/dietpi/.dietpi-services_include_exclude
   /boot/dietpi/dietpi-services dietpi_controlled "$servicename"
@@ -39,6 +39,9 @@ G_EXEC rm /var/lib/dietpi/license.txt
 
 # Remove DietPi-VPN
 G_EXEC rm /etc/systemd/system/dietpi-vpn.service
+
+# Disable HDMI
+G_CONFIG_INJECT "AUT0_SETUP_HEADLESS=" "AUTO_SETUP_HEADLESS=1" /boot/dietpi.txt
 
 # Reboot
 (while [ "$(</boot/dietpi/.install_stage)" != 2 ]; do sleep 1; done; /usr/sbin/reboot) > /dev/null 2>&1 &
