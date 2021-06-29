@@ -19,12 +19,12 @@ jobs:
 
       - name: Extract image
         run: |
-          7z e -o$DIETPI_IMAGE_NAME $DIETPI_IMAGE_NAME.7z
-          mv ${DIETPI_IMAGE_NAME}/${DIETPI_IMAGE_NAME}.img ${DIETPI_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img
+          7z e -o$OUTPUT_IMAGE_NAME $DIETPI_IMAGE_NAME.7z
+          mv ${OUTPUT_IMAGE_NAME}/${DIETPI_IMAGE_NAME}.img ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img
 
       - name: Mount image
         run: |
-          DEV=$(sudo losetup --show -f -P $DIETPI_IMAGE_NAME/$OUTPUT_IMAGE_NAME.img)
+          DEV=$(sudo losetup --show -f -P $OUTPUT_IMAGE_NAME/$OUTPUT_IMAGE_NAME.img)
           PART=${DEV}p1
           MOUNT=/mnt/$(basename $PART)
           echo "DEV=$DEV" >> $GITHUB_ENV
@@ -35,8 +35,8 @@ jobs:
 
       - name: Copy files and directories
         run: |
-          mv sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE.txt
-          mv sailtrack-core/README.md sailtrack-core/sailtrack-README.md
+          cp sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE.txt
+          cp sailtrack-core/README.md sailtrack-core/sailtrack-README.md
           sudo rsync -rt --exclude=".*" sailtrack-core/ $MOUNT
 
       - name: Unmount image
@@ -44,8 +44,19 @@ jobs:
           sudo umount $MOUNT
           sudo losetup -d $DEV
 
+      - name: Update hashes
+        run: |
+          echo -e "FILE:\t${OUTPUT_IMAGE_NAME}.img" > ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "DATE:\t$(date)" >> ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "MD5:\t$(md5sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "SHA1:\t$(sha1sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
+          echo -e "SHA256:\t$(sha256sum ${OUTPUT_IMAGE_NAME}/${OUTPUT_IMAGE_NAME}.img | mawk '{print $1}')" >> ${OUTPUT_IMAGE_NAME}/hash.txt
+
+      - name: Update README
+        run: cp sailtrack-core/README.md ${OUTPUT_IMAGE_NAME}/README.md
+
       - name: Upload image
         uses: actions/upload-artifact@v2
         with:
-          path: ${{ env.DIETPI_IMAGE_NAME }}/${{ env.OUTPUT_IMAGE_NAME }}.img
+          path: ${{ env.OUTPUT_IMAGE_NAME }}
           name: ${{ env.OUTPUT_IMAGE_NAME }}
