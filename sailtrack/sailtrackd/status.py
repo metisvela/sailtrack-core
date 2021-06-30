@@ -1,6 +1,7 @@
 import json
 import logging
 import struct
+from configparser import ConfigParser
 from datetime import timedelta
 
 import RPi.GPIO as GPIO
@@ -25,7 +26,7 @@ def read_voltage(bus):
 def read_capacity(bus):
     address = 0x36
     read = bus.read_word_data(address, 4)
-    swapped = struct.unpack("<H", struct.pack(">H", read))[0]
+    swapped = struct.unpack('<H', struct.pack('>H', read))[0]
     capacity = swapped / 256
     return capacity
 
@@ -40,12 +41,17 @@ mqtt.connect('localhost')
 
 tl = Timeloop()
 
+config = ConfigParser()
+config.read('etc/sailtrack/sailtrackd.conf')
+publish_period = 1/config.getfloat('status', 'publish_rate', fallback=10)
+log_period = 1/config.getfloat('status', 'log_rate', fallback=10)
+
 logging.getLogger('timeloop').removeHandler(logging.getLogger('timeloop').handlers[0])
 logging.basicConfig(format='[%(name)s] [%(levelname)s] %(message)s', level=logging.INFO)
 published_messages = 0
 
 
-@tl.job(interval=timedelta(seconds=10))
+@tl.job(interval=timedelta(seconds=publish_period))
 def publish_job():
     mqtt.publish('module/core', json.dumps({
         'measurement': 'core',
@@ -57,7 +63,7 @@ def publish_job():
     }))
 
 
-@tl.job(interval=timedelta(seconds=10))
+@tl.job(interval=timedelta(seconds=log_period))
 def log_job():
     logging.getLogger('log_job').info(f"Published Messages: {published_messages}")
 
