@@ -1,0 +1,10 @@
+[Unit]
+Description=SailTrack - X708 Automatic ShutDown
+After=dietpi-ramlog.service
+Before=dietpi-preboot.service
+
+[Service]
+ExecStart=/boot/sailtrack/x708/asd.sh
+
+[Install]
+WantedBy=multi-user.target

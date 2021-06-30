@@ -1,3 +1,5 @@
+#!/bin/bash
+
 . /boot/dietpi/func/dietpi-globals
 
 FP_EXIT_CODE="/run/dietpi/.timesync_exit_status"
