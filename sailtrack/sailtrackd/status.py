@@ -1,11 +1,13 @@
 import json
 import logging
+import os
 import struct
+import sys
 from configparser import ConfigParser
 from datetime import timedelta
 
-import RPi.GPIO as GPIO
 import smbus
+from gpiozero import DigitalInputDevice, CPUTemperature, LoadAverage, DiskUsage
 from paho.mqtt.client import Client
 from timeloop import Timeloop
 
@@ -32,8 +34,6 @@ def read_capacity(bus):
 
 
 bus = smbus.SMBus(1)
-GPIO.setmode(GPIO.BCM)
-GPIO.setup(6, GPIO.IN)
 mqtt = Client('core-status')
 mqtt.username_pw_set('mosquitto', 'dietpi')
 mqtt.on_publish = on_publish
@@ -43,8 +43,8 @@ tl = Timeloop()
 
 config = ConfigParser()
 config.read('etc/sailtrack/sailtrackd.conf')
-publish_period = 1/config.getfloat('status', 'publish_rate', fallback=10)
-log_period = 1/config.getfloat('status', 'log_rate', fallback=10)
+publish_period = 1 / config.getfloat('status', 'publish_rate', fallback=0.1)
+log_period = 1 / config.getfloat('status', 'log_rate', fallback=0.1)
 
 logging.getLogger('timeloop').removeHandler(logging.getLogger('timeloop').handlers[0])
 logging.basicConfig(format='[%(name)s] [%(levelname)s] %(message)s', level=logging.INFO)
@@ -53,14 +53,23 @@ published_messages = 0
 
 @tl.job(interval=timedelta(seconds=publish_period))
 def publish_job():
+    sys.stdout = open(os.devnull, 'w')
     mqtt.publish('module/core', json.dumps({
         'measurement': 'core',
         'battery': {
             'voltage': read_voltage(bus),
             'capacity': read_capacity(bus),
-            'charging': not GPIO.input(6)
+            'charging': not DigitalInputDevice(6).value
+        },
+        'cpu': {
+            'temperature': CPUTemperature().temperature,
+            'load': LoadAverage().load_average
+        },
+        'disk': {
+            'usage': DiskUsage().usage
         }
     }))
+    sys.stdout = sys.__stdout__
 
 
 @tl.job(interval=timedelta(seconds=log_period))
