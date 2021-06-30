@@ -37,8 +37,5 @@ done
 # Remove DietPi-VPN
 G_EXEC rm /etc/systemd/system/dietpi-vpn.service
 
-# Disable HDMI
-G_CONFIG_INJECT "AUTO_SETUP_HEADLESS=" "AUTO_SETUP_HEADLESS=1" /boot/dietpi.txt
-
 # Reboot
 (while [ "$(</boot/dietpi/.install_stage)" != 2 ]; do sleep 1; done; /usr/sbin/reboot) > /dev/null 2>&1 &
