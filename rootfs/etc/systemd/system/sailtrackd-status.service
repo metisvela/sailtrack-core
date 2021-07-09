@@ -2,5 +2,7 @@
 Description=SailTrackd - Status
 
 [Service]
+ExecStart=/usr/bin/python3 /boot/sailtrack/sailtrackd/status.py
 
 [Install]
+WantedBy=multi-user.target
