@@ -1,0 +1,6 @@
+INFLUX_URL="http://localhost:8086"
+INFLUX_USER="admin"
+INFLUX_PASSWORD="dietpi"
+MQTT_SERVER="tcp://localhost:1883"
+MQTT_USER="mosquitto"
+MQTT_PASSWORD="dietpi"
