@@ -55,7 +55,6 @@ published_messages = 0
 def publish_job():
     sys.stdout = open(os.devnull, 'w')
     mqtt.publish('module/core', json.dumps({
-        'measurement': 'core',
         'battery': {
             'voltage': read_voltage(bus),
             'capacity': read_capacity(bus),
@@ -67,7 +66,8 @@ def publish_job():
         },
         'disk': {
             'usage': DiskUsage().usage
-        }
+        },
+        'measurement': 'core'
     }))
     sys.stdout = sys.__stdout__
 
