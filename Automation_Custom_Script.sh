@@ -11,6 +11,7 @@ G_EXEC sed -i "/systemd/,/fi/s/^/#/" /lib/udev/hwclock-set
 G_EXEC sed -i "/--systz/s/^/#/" /lib/udev/hwclock-set
 
 # Install packages
+G_AGI avahi-daemon
 G_AGI telegraf
 G_EXEC pip3 install -r /boot/sailtrack/sailtrackd/requirements.txt
 
