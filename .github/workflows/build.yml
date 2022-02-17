@@ -38,7 +38,7 @@ jobs:
           cp sailtrack-core/README.md ${OUTPUT_IMAGE_NAME}/README.md
           mv sailtrack-core/LICENSE sailtrack-core/sailtrack-LICENSE.txt
           mv sailtrack-core/README.md sailtrack-core/sailtrack-README.md
-          sudo rsync -rt --exclude=".*" sailtrack-core/ $MOUNT
+          sudo rsync -rt --exclude=".*" --exclude="hardware" sailtrack-core/ $MOUNT
 
       - name: Unmount image
         run: |
