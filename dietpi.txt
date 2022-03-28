@@ -254,7 +254,7 @@ SOFTWARE_NEXTCLOUD_DATADIR=/mnt/dietpi_userdata/nextcloud_data
 SOFTWARE_WIFI_HOTSPOT_SSID=SailTrack-Net
 # - Key requires a minimum of 8 characters
 SOFTWARE_WIFI_HOTSPOT_KEY=sailtracknet
-SOFTWARE_WIFI_HOTSPOT_CHANNEL=3
+SOFTWARE_WIFI_HOTSPOT_CHANNEL=1
 
 # X.org
 # - DPI 96(default) 120(+25%) 144(+50%) 168(+75%) 192(+100%)
