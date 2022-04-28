@@ -1,10 +1,10 @@
 [Unit]
-Description=SailTrack - X708 Power
+Description=SailTrack-X708_PWR
 After=dietpi-ramlog.service
 Before=dietpi-preboot.service
 
 [Service]
-ExecStart=/boot/sailtrack/x708/pwr.sh
+ExecStart=/boot/sailtrack-x708_pwr
 
 [Install]
 WantedBy=multi-user.target

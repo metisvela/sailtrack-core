@@ -1,42 +1,32 @@
 . /boot/dietpi/func/dietpi-globals
 
-# Configure WiFi Hotspot
-/boot/dietpi/func/dietpi-set_hardware wifimodules onboard_enable
-/boot/dietpi/func/dietpi-set_hardware wificountrycode "$(sed -n '/^[[:blank:]]*AUTO_SETUP_NET_WIFI_COUNTRY_CODE=/{s/^[^=]*=//p;q}' /boot/dietpi.txt)"
+# Configure X708 HAT
+G_CONFIG_INJECT "alias poweroff=/boot/sailtrack/sailtrack-x708_softsd" "alias poweroff=/boot/sailtrack/sailtrack-x708_softsd" /etc/bash.bashrc
 
-# Configure RTC Module
-G_AGP fake-hwclock
-G_CONFIG_INJECT "dtoverlay=i2c-rtc,ds3231" "dtoverlay=i2c-rtc,ds3231" /boot/config.txt
-G_EXEC sed -i "/systemd/,/fi/s/^/#/" /lib/udev/hwclock-set
-G_EXEC sed -i "/--systz/s/^/#/" /lib/udev/hwclock-set
+# Remove unused services
+G_EXEC rm /etc/systemd/system/dietpi-vpn.service
+G_EXEC rm /etc/systemd/system/dietpi-cloudshell.service
 
-# Install packages
-G_AGI avahi-daemon
+# Uninstall OpenSSH Client
+/boot/dietpi/dietpi-software uninstall 0
+
+# Install Telegraf
 G_AGI telegraf
-G_EXEC pip3 install -r /boot/sailtrack/sailtrackd/requirements.txt
-
-# Merge filesystem
-G_EXEC cp -rT /boot/rootfs /
-G_EXEC rm -r /boot/rootfs
 
 # Enable services
-for s in /etc/systemd/system/sailtrack*.service; do G_EXEC systemctl enable "$s"; done
+G_EXEC systemctl enable sailtrack-x708_asd
+G_EXEC systemctl enable sailtrack-x708_pwr
 G_CONFIG_INJECT "+ telegraf" "+ telegraf" /boot/dietpi/.dietpi-services_include_exclude
-for s in /etc/systemd/system/sailtrackd*.service; do
-  servicename=$(basename "$s" .service)
-  G_CONFIG_INJECT "+ $servicename" "+ $servicename" /boot/dietpi/.dietpi-services_include_exclude
-  /boot/dietpi/dietpi-services dietpi_controlled "$servicename"
-done
-/boot/dietpi/dietpi-services dietpi_controlled telegraf
+G_CONFIG_INJECT "+ sailtrack-status" "+ sailtrack-status" /boot/dietpi/.dietpi-services_include_exclude
+G_EXEC /boot/dietpi/dietpi-services dietpi_controlled telegraf
+G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-status
 
 # Configure DietPi Banner
-index=0
-for i in 1 1 1 0 0 1 0 0 0 0 0 0 0 0; do
-  echo "aENABLED[$((index++))]=$i" >> /boot/dietpi/.dietpi-banner
+settings=(1 1 1 0 0 1 0 1 0 0 0 0 0 0 0 0)
+for i in "${!settings[@]}"; do
+  G_CONFIG_INJECT "aENABLED\[$i]=" "aENABLED[$i]=${settings[$i]}" /boot/dietpi/.dietpi-banner
 done
 
-# Remove DietPi-VPN
-G_EXEC rm /etc/systemd/system/dietpi-vpn.service
+# Reboot after first boot is completed
+(while [ -f "/root/AUTO_CustomScript.sh" ]; do sleep 1; done; /usr/sbin/reboot) > /dev/null 2>&1 &
 
-# Reboot
-(while [ "$(</boot/dietpi/.install_stage)" != 2 ]; do sleep 1; done; /usr/sbin/reboot) > /dev/null 2>&1 &

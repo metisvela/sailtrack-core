@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import json
 import logging
 import os
@@ -10,6 +12,9 @@ import smbus
 from gpiozero import DigitalInputDevice, CPUTemperature, LoadAverage, DiskUsage
 from paho.mqtt.client import Client
 from timeloop import Timeloop
+
+PUBLISH_RATE = 0.1
+LOG_RATE = 0.1
 
 
 def on_publish(client, userdata, mid):
@@ -41,17 +46,12 @@ mqtt.connect('localhost')
 
 tl = Timeloop()
 
-config = ConfigParser()
-config.read('etc/sailtrack/sailtrackd.conf')
-publish_period = 1 / config.getfloat('status', 'publish_rate', fallback=0.1)
-log_period = 1 / config.getfloat('status', 'log_rate', fallback=0.1)
-
 logging.getLogger('timeloop').removeHandler(logging.getLogger('timeloop').handlers[0])
 logging.basicConfig(format='[%(name)s] [%(levelname)s] %(message)s', level=logging.INFO)
 published_messages = 0
 
 
-@tl.job(interval=timedelta(seconds=publish_period))
+@tl.job(interval=timedelta(seconds=1/PUBLISH_RATE))
 def publish_job():
     sys.stdout = open(os.devnull, 'w')
     mqtt.publish('module/core', json.dumps({
@@ -72,7 +72,7 @@ def publish_job():
     sys.stdout = sys.__stdout__
 
 
-@tl.job(interval=timedelta(seconds=log_period))
+@tl.job(interval=timedelta(seconds=1/LOG_RATE))
 def log_job():
     logging.getLogger('log_job').info(f"Published Messages: {published_messages}")
 

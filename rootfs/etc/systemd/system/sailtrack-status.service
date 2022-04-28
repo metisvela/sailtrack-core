@@ -1,0 +1,8 @@
+[Unit]
+Description=SailTrack-Status
+
+[Service]
+ExecStart=/boot/sailtrack/sailtrack-status
+
+[Install]
+WantedBy=multi-user.target
