@@ -13,6 +13,9 @@ G_EXEC rm /etc/systemd/system/dietpi-cloudshell.service
 # Install Telegraf
 G_AGI telegraf
 
+# Install Mosquitto Clients (`mosquitto_sub`, `mosquitto_pub`,...)
+G_AGI mosquitto-clients
+
 # Enable services
 G_EXEC systemctl enable sailtrack-x708_asd
 G_EXEC systemctl enable sailtrack-x708_pwr
@@ -29,4 +32,3 @@ done
 
 # Reboot after first boot is completed
 (while [ -f "/root/AUTO_CustomScript.sh" ]; do sleep 1; done; /usr/sbin/reboot) > /dev/null 2>&1 &
-

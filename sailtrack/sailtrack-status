@@ -1,2 +1,28 @@
 #!/bin/bash
 
+CHARGE_PIN=6
+
+echo "in" > /sys/class/gpio/gpio$CHARGE_PIN/direction
+
+published=0
+while true
+do
+  read=$(i2cget -y 1 0x36 0x02 w)
+  swapped=${read:4:2}${read:2:2}
+  voltage=$(awk "BEGIN {print ARGV[1] * 1.25 / 1000 / 16}" $((16#$swapped)))
+
+  read=$(i2cget -y 1 0x36 0x04 w)
+  swapped=${read:4:2}${read:2:2}
+  capacity=$(awk "BEGIN {print ARGV[1] / 256}" $((16#$swapped)))
+
+  charging=$((! $(cat /sys/class/gpio/gpio$CHARGE_PIN/value)))
+
+  cpu_temp=$(awk "BEGIN {print ARGV[1] / 1000}" "$(cat /sys/class/thermal/thermal_zone0/temp)")
+
+  cpu_load_avg=${($(cat /proc/loadavg))[1]}
+
+  # TODO: Disk usage
+
+  echo "Published messages: $((++published))"
+  sleep 10
+done
