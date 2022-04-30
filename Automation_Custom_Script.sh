@@ -12,7 +12,10 @@ G_EXEC rm /etc/systemd/system/dietpi-cloudshell.service
 
 # Install required packages
 G_AGI telegraf
-G_EXEC pip3 install -r /boot/sailtrack/requirements.txt
+G_EXEC pip3 install gpiozero
+G_EXEC pip3 install paho-mqtt
+G_EXEC pip3 install smbus2
+G_EXEC pip3 install timeloop
 
 # Enable services
 G_EXEC systemctl enable sailtrack-x708_asd

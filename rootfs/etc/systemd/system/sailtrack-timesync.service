@@ -2,7 +2,7 @@
 Description=SailTrack-TimeSync
 
 [Service]
-ExecStart=/boot/sailtrack/sailtrack-timesync.py
+ExecStart=/boot/sailtrack/sailtrack-timesync
 
 [Install]
 WantedBy=multi-user.target

@@ -5,6 +5,7 @@ import logging
 import os
 import struct
 import sys
+from configparser import ConfigParser
 from datetime import timedelta
 
 from gpiozero import DigitalInputDevice, CPUTemperature, LoadAverage, DiskUsage
@@ -17,9 +18,8 @@ from timeloop import Timeloop
 MQTT_PUBLISH_FREQ_HZ = 0.1
 LOG_PRINT_FREQ_HZ = 0.1
 
-MQTT_HOST_ADDR = "192.168.42.1"
-MQTT_USERNAME = "mosquitto"
-MQTT_PASSWORD = "dietpi"
+MQTT_CLIENT_ID = "sailtrack-status"
+CONFIG_FILE_PATH = "/etc/sailtrack/sailtrack.conf"
 
 I2C_BUS_NUM = 1
 I2C_ADDR = 0x36
@@ -54,19 +54,25 @@ def get_battery_capacity():
     return regval / 256
 
 
+config = ConfigParser()
+config.read(CONFIG_FILE_PATH)
 bus = SMBus(I2C_BUS_NUM)
-mqtt = Client("sailtrack-status")
-mqtt.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+mqtt = Client(MQTT_CLIENT_ID)
+mqtt.username_pw_set(config["mqtt"]["username"], config["mqtt"]["password"])
 mqtt.on_publish = on_publish_callback
-mqtt.connect(MQTT_HOST_ADDR)
+mqtt.connect(config["mqtt"]["host"])
 tl = Timeloop()
-formatter = logging.Formatter("[%(name)s] [%(levelname)s] %(message)s")
+formatter = logging.Formatter(config.get("log", "format", raw=True))
 logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
-logger = logging.getLogger("log_job")
+logger = logging.getLogger(MQTT_CLIENT_ID)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+battery_charging = DigitalInputDevice(CHARGE_PIN)
+cpu_temperature = CPUTemperature()
+cpu_load = LoadAverage()
+disk_load = DiskUsage()
 
 
 @tl.job(interval=timedelta(seconds=MQTT_JOB_INTERVAL_SEC))
@@ -76,14 +82,14 @@ def mqtt_job():
         "battery": {
             "voltage": get_battery_voltage(),
             "capacity": get_battery_capacity(),
-            "charging": not DigitalInputDevice(CHARGE_PIN).value
+            "charging": not battery_charging.value
         },
         "cpu": {
-            "temperature": CPUTemperature().temperature,
-            "load": LoadAverage().load_average
+            "temperature": cpu_temperature.temperature,
+            "load": cpu_load.load_average
         },
         "disk": {
-            "load": DiskUsage().value
+            "load": disk_load.value
         }
     }))
     sys.stdout = sys.__stdout__
