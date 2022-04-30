@@ -3,11 +3,9 @@
 # Configure X708 HAT
 G_CONFIG_INJECT "alias poweroff=/boot/sailtrack/sailtrack-x708_softsd" "alias poweroff=/boot/sailtrack/sailtrack-x708_softsd" /etc/bash.bashrc
 
-# Remove unused services
+# Remove unused components
 G_EXEC rm /etc/systemd/system/dietpi-vpn.service
 G_EXEC rm /etc/systemd/system/dietpi-cloudshell.service
-
-# Remove unused software
 /boot/dietpi/dietpi-software uninstall 0
 
 # Install required packages
