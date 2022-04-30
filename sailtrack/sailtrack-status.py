@@ -5,76 +5,93 @@ import logging
 import os
 import struct
 import sys
-from configparser import ConfigParser
 from datetime import timedelta
 
-import smbus
 from gpiozero import DigitalInputDevice, CPUTemperature, LoadAverage, DiskUsage
 from paho.mqtt.client import Client
+from smbus2 import SMBus
 from timeloop import Timeloop
 
-PUBLISH_RATE = 0.1
-LOG_RATE = 0.1
+# -------------------------- Configuration -------------------------- #
+
+MQTT_PUBLISH_FREQ_HZ = 0.1
+LOG_PRINT_FREQ_HZ = 0.1
+
+MQTT_HOST_ADDR = "192.168.42.1"
+MQTT_USERNAME = "mosquitto"
+MQTT_PASSWORD = "dietpi"
+
+I2C_BUS_NUM = 1
+I2C_ADDR = 0x36
+I2C_BATTERY_VOLTAGE_REG = 0x02
+I2C_BATTERY_CAPACITY_REG = 0x04
+
+CHARGE_PIN = 6
+
+MQTT_JOB_INTERVAL_SEC = 1 / MQTT_PUBLISH_FREQ_HZ
+LOG_JOB_INTERVAL_SEC = 1 / LOG_PRINT_FREQ_HZ
+
+# ------------------------------------------------------------------- #
+
+published_messages = 0
+received_messages = 0
 
 
-def on_publish(client, userdata, mid):
+def on_publish_callback(client, userdata, mid):
     global published_messages
     published_messages += 1
 
 
-def read_voltage(bus):
-    address = 0x36
-    read = bus.read_word_data(address, 2)
-    swapped = struct.unpack('<H', struct.pack('>H', read))[0]
-    voltage = swapped * 1.25 / 1000 / 16
-    return voltage
+def get_battery_voltage():
+    regval = bus.read_word_data(I2C_ADDR, I2C_BATTERY_VOLTAGE_REG)
+    regval = struct.unpack("<H", struct.pack(">H", regval))[0]
+    return regval * 1.25 / 1000 / 16
 
 
-def read_capacity(bus):
-    address = 0x36
-    read = bus.read_word_data(address, 4)
-    swapped = struct.unpack('<H', struct.pack('>H', read))[0]
-    capacity = swapped / 256
-    return capacity
+def get_battery_capacity():
+    regval = bus.read_word_data(I2C_ADDR, I2C_BATTERY_CAPACITY_REG)
+    regval = struct.unpack("<H", struct.pack(">H", regval))[0]
+    return regval / 256
 
 
-bus = smbus.SMBus(1)
-mqtt = Client('core-status')
-mqtt.username_pw_set('mosquitto', 'dietpi')
-mqtt.on_publish = on_publish
-mqtt.connect('localhost')
-
+bus = SMBus(I2C_BUS_NUM)
+mqtt = Client("sailtrack-status")
+mqtt.username_pw_set(MQTT_USERNAME, MQTT_PASSWORD)
+mqtt.on_publish = on_publish_callback
+mqtt.connect(MQTT_HOST_ADDR)
 tl = Timeloop()
+formatter = logging.Formatter("[%(name)s] [%(levelname)s] %(message)s")
+logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
+logger = logging.getLogger("log_job")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
 
-logging.getLogger('timeloop').removeHandler(logging.getLogger('timeloop').handlers[0])
-logging.basicConfig(format='[%(name)s] [%(levelname)s] %(message)s', level=logging.INFO)
-published_messages = 0
 
-
-@tl.job(interval=timedelta(seconds=1/PUBLISH_RATE))
-def publish_job():
+@tl.job(interval=timedelta(seconds=MQTT_JOB_INTERVAL_SEC))
+def mqtt_job():
     sys.stdout = open(os.devnull, 'w')
-    mqtt.publish('module/core', json.dumps({
-        'battery': {
-            'voltage': read_voltage(bus),
-            'capacity': read_capacity(bus),
-            'charging': not DigitalInputDevice(6).value
+    mqtt.publish("status/core", json.dumps({
+        "battery": {
+            "voltage": get_battery_voltage(),
+            "capacity": get_battery_capacity(),
+            "charging": not DigitalInputDevice(CHARGE_PIN).value
         },
-        'cpu': {
-            'temperature': CPUTemperature().temperature,
-            'load': LoadAverage().load_average
+        "cpu": {
+            "temperature": CPUTemperature().temperature,
+            "load": LoadAverage().load_average
         },
-        'disk': {
-            'usage': DiskUsage().usage
-        },
-        'measurement': 'core'
+        "disk": {
+            "load": DiskUsage().value
+        }
     }))
     sys.stdout = sys.__stdout__
 
 
-@tl.job(interval=timedelta(seconds=1/LOG_RATE))
+@tl.job(interval=timedelta(seconds=LOG_JOB_INTERVAL_SEC))
 def log_job():
-    logging.getLogger('log_job').info(f"Published Messages: {published_messages}")
+    logger.info(f"Published messages: {published_messages}, Received messages: {received_messages}")
 
 
 tl.start(block=True)

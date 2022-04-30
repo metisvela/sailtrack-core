@@ -1,11 +1,15 @@
 #!/bin/bash
 
 POWEROFF_VOLTAGE=2.5
+I2C_BUS_NUM=1
+I2C_ADDR=0x36
+I2C_BATTERY_VOLTAGE_REG=0x02
+SLEEP_TIME_MS=10
 
 while : ; do
-  read=$(i2cget -y 1 0x36 0x02 w)
-  swapped=${read:4:2}${read:2:2}
-  voltage=$(awk 'BEGIN {printf "%.2f", ARGV[1] * 1.25 / 1000 / 16}' "$((16#$swapped))")
-  if awk "BEGIN {exit ARGV[1] > ARGV[2]}" "$voltage" "$POWEROFF_VOLTAGE"; then sudo /usr/sbin/poweroff; fi
-  sleep 10
+  regval=$(i2cget -y $I2C_BUS_NUM $I2C_ADDR $I2C_BATTERY_VOLTAGE_REG w)
+  regval=${regval:4:2}${regval:2:2}
+  voltage=$(awk 'BEGIN {printf "%.2f", ARGV[1] * 1.25 / 1000 / 16}' "$((16#$regval))")
+  if awk "BEGIN {exit ARGV[1] > ARGV[2]}" "$voltage" "$POWEROFF_VOLTAGE"; then poweroff; fi
+  sleep $SLEEP_TIME_MS
 done

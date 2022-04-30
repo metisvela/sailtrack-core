@@ -2,7 +2,7 @@
 Description=SailTrack-Status
 
 [Service]
-ExecStart=/boot/sailtrack/sailtrack-status
+ExecStart=/boot/sailtrack/sailtrack-status.py
 
 [Install]
 WantedBy=multi-user.target

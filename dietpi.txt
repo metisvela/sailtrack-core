@@ -131,6 +131,7 @@ AUTO_SETUP_GLOBAL_PASSWORD=dietpi
 # - DietPi will automatically install all dependencies, like ALSA/X11 for desktops etc.
 # - E.g. the following (without the leading "#") will install the LXDE desktop automatically on first boot:
 #AUTO_SETUP_INSTALL_SOFTWARE_ID=23
+AUTO_SETUP_INSTALL_SOFTWARE_ID=130  # Python 3 + Pip
 AUTO_SETUP_INSTALL_SOFTWARE_ID=72   # I2C
 AUTO_SETUP_INSTALL_SOFTWARE_ID=60   # WiFi Hotspot
 AUTO_SETUP_INSTALL_SOFTWARE_ID=123  # Mosquitto
