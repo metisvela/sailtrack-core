@@ -241,7 +241,7 @@ SOFTWARE_OWNCLOUD_DATADIR=/mnt/dietpi_userdata/owncloud_data
 SOFTWARE_NEXTCLOUD_DATADIR=/mnt/dietpi_userdata/nextcloud_data
 
 # WiFi Hotspot
-SOFTWARE_WIFI_HOTSPOT_SSID=SailTrack-Net
+SOFTWARE_WIFI_HOTSPOT_SSID=SailTrack-CoreNet
 # - Key requires a minimum of 8 characters
 SOFTWARE_WIFI_HOTSPOT_KEY=sailtracknet
 SOFTWARE_WIFI_HOTSPOT_CHANNEL=1

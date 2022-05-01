@@ -2,6 +2,7 @@
 Description=SailTrack-TimeSync
 
 [Service]
+Restart=on-failure
 ExecStart=/boot/sailtrack/sailtrack-timesync
 
 [Install]

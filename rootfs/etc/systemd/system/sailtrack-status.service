@@ -2,6 +2,7 @@
 Description=SailTrack-Status
 
 [Service]
+Restart=on-failure
 ExecStart=/boot/sailtrack/sailtrack-status
 
 [Install]
