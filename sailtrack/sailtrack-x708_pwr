@@ -1,29 +1,30 @@
 #!/bin/bash
 
-SHUTDOWN=5
-REBOOTPULSEMINIMUM=200
-REBOOTPULSEMAXIMUM=600
-echo "$SHUTDOWN" > /sys/class/gpio/export
-echo "in" > /sys/class/gpio/gpio$SHUTDOWN/direction
-BOOT=12
-echo "$BOOT" > /sys/class/gpio/export
-echo "out" > /sys/class/gpio/gpio$BOOT/direction
-echo "1" > /sys/class/gpio/gpio$BOOT/value
+SHUTDOWN_PIN=5
+BOOT_PIN=12
+REBOOT_PULSE_MIN_MS=200
+REBOOT_PULSE_MAX_MS=600
+
+echo $SHUTDOWN_PIN > /sys/class/gpio/export
+echo "in" > /sys/class/gpio/gpio$SHUTDOWN_PIN/direction
+echo $BOOT_PIN > /sys/class/gpio/export
+echo "out" > /sys/class/gpio/gpio$BOOT_PIN/direction
+echo "1" > /sys/class/gpio/gpio$BOOT_PIN/value
 
 while : ; do
-  shutdownSignal=$(</sys/class/gpio/gpio$SHUTDOWN/value)
-  if [ "$shutdownSignal" = 0 ]; then /bin/sleep 0.2
+  signal=$(</sys/class/gpio/gpio$SHUTDOWN_PIN/value)
+  if [ "$signal" = 0 ]; then /bin/sleep 0.2
   else
-    pulseStart=$(date +%s%N | cut -b1-13)
-    while [ "$shutdownSignal" = 1 ]; do
+    start=$(date +%s%N | cut -b1-13)
+    while [ "$signal" = 1 ]; do
       /bin/sleep 0.02
-      if [ $(($(date +%s%N | cut -b1-13)-"$pulseStart")) -gt $REBOOTPULSEMAXIMUM ]; then
+      if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $REBOOT_PULSE_MAX_MS ]; then
         sudo /usr/sbin/poweroff
         exit
       fi
-      shutdownSignal=$(</sys/class/gpio/gpio$SHUTDOWN/value)
+      signal=$(</sys/class/gpio/gpio$SHUTDOWN_PIN/value)
     done
-    if [ $(($(date +%s%N | cut -b1-13)-"$pulseStart")) -gt $REBOOTPULSEMINIMUM ]; then
+    if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $REBOOT_PULSE_MIN_MS ]; then
       sudo /usr/sbin/reboot
       exit
     fi
