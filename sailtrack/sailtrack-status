@@ -34,7 +34,6 @@ LOG_JOB_INTERVAL_MS = 1000 / LOG_PRINT_FREQ_HZ
 # ------------------------------------------------------------------- #
 
 published_messages = 0
-received_messages = 0
 
 
 def on_publish_callback(client, userdata, mid):
@@ -98,8 +97,7 @@ def mqtt_job():
 
 @tl.job(interval=timedelta(milliseconds=LOG_JOB_INTERVAL_MS))
 def log_job():
-    logger.info(f"Published messages: {published_messages}, "
-                f"Received messages: {received_messages}")
+    logger.info(f"Published messages: {published_messages}")
 
 
 tl.start(block=True)

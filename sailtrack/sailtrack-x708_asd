@@ -10,6 +10,6 @@ while : ; do
   regval=$(i2cget -y $I2C_BUS_NUM $I2C_ADDR $I2C_BATTERY_VOLTAGE_REG w)
   regval=${regval:4:2}${regval:2:2}
   voltage=$(awk 'BEGIN {printf "%.2f", ARGV[1] * 1.25 / 1000 / 16}' "$((16#$regval))")
-  if awk "BEGIN {exit ARGV[1] > ARGV[2]}" "$voltage" "$POWEROFF_VOLTAGE"; then poweroff; fi
+  if awk "BEGIN {exit ARGV[1] > ARGV[2]}" "$voltage" "$POWEROFF_VOLTAGE"; then /boot/sailtrack/sailtrack-x708_softsd; fi
   sleep $SLEEP_TIME_MS
 done
