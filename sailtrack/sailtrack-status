@@ -28,8 +28,8 @@ I2C_BATTERY_CAPACITY_REG = 0x04
 
 CHARGE_PIN = 6
 
-MQTT_JOB_INTERVAL_SEC = 1 / MQTT_PUBLISH_FREQ_HZ
-LOG_JOB_INTERVAL_SEC = 1 / LOG_PRINT_FREQ_HZ
+MQTT_JOB_INTERVAL_MS = 1000 / MQTT_PUBLISH_FREQ_HZ
+LOG_JOB_INTERVAL_MS = 1000 / LOG_PRINT_FREQ_HZ
 
 # ------------------------------------------------------------------- #
 
@@ -61,6 +61,7 @@ mqtt = Client(MQTT_CLIENT_ID)
 mqtt.username_pw_set(config["mqtt"]["username"], config["mqtt"]["password"])
 mqtt.on_publish = on_publish_callback
 mqtt.connect(config["mqtt"]["host"])
+mqtt.loop_start()
 tl = Timeloop()
 formatter = logging.Formatter(config.get("log", "format", raw=True))
 logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
@@ -75,7 +76,7 @@ cpu_load = LoadAverage()
 disk_load = DiskUsage()
 
 
-@tl.job(interval=timedelta(seconds=MQTT_JOB_INTERVAL_SEC))
+@tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
 def mqtt_job():
     sys.stdout = open(os.devnull, 'w')
     mqtt.publish("status/core", json.dumps({
@@ -95,9 +96,10 @@ def mqtt_job():
     sys.stdout = sys.__stdout__
 
 
-@tl.job(interval=timedelta(seconds=LOG_JOB_INTERVAL_SEC))
+@tl.job(interval=timedelta(milliseconds=LOG_JOB_INTERVAL_MS))
 def log_job():
-    logger.info(f"Published messages: {published_messages}, Received messages: {received_messages}")
+    logger.info(f"Published messages: {published_messages}, "
+                f"Received messages: {received_messages}")
 
 
 tl.start(block=True)

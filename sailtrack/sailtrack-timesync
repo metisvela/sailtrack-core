@@ -4,25 +4,39 @@ import json
 import logging
 import time
 from configparser import ConfigParser
+from datetime import timedelta
 
 from paho.mqtt.client import Client
+from timeloop import Timeloop
 
 # -------------------------- Configuration -------------------------- #
+
+TIMESYNC_DELTA_THRESHOLD = 1
+LOG_PRINT_FREQ_HZ = 0.1
 
 MQTT_CLIENT_ID = "sailtrack-timesync"
 CONFIG_FILE_PATH = "/etc/sailtrack/sailtrack.conf"
 
+LOG_JOB_INTERVAL_MS = 1000 / LOG_PRINT_FREQ_HZ
+
 # ------------------------------------------------------------------- #
+
+received_epochs = 0
+time_syncs = 0
+delta = 0
 
 
 def on_message_callback(client, userdata, message):
+    global received_epochs
+    global time_syncs
+    global delta
     doc = json.loads(message.payload)
     if "epoch" in doc and doc["epoch"]:
-        logger.info(f"Received epoch: {doc['epoch']}")
-        time.clock_settime(time.CLOCK_REALTIME, doc["epoch"])
-        logger.info("Time synced successfully!")
-        logger.info("Exiting...")
-        exit()
+        received_epochs += 1
+        delta = doc["epoch"] - int(time.time())
+        if abs(delta) > TIMESYNC_DELTA_THRESHOLD:
+            time.clock_settime(time.CLOCK_REALTIME, doc["epoch"])
+            time_syncs += 1
 
 
 config = ConfigParser()
@@ -31,11 +45,23 @@ mqtt = Client(MQTT_CLIENT_ID)
 mqtt.username_pw_set(config["mqtt"]["username"], config["mqtt"]["password"])
 mqtt.on_message = on_message_callback
 mqtt.connect(config["mqtt"]["host"])
+mqtt.loop_start()
 mqtt.subscribe("sensor/gps0")
+tl = Timeloop()
+formatter = logging.Formatter(config.get("log", "format", raw=True))
+logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
 logger = logging.getLogger(MQTT_CLIENT_ID)
 logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
-handler.setFormatter(logging.Formatter(config.get("log", "format", raw=True)))
+handler.setFormatter(formatter)
 logger.addHandler(handler)
-logger.info("Waiting for epoch...")
-mqtt.loop_forever()
+
+
+@tl.job(interval=timedelta(milliseconds=LOG_JOB_INTERVAL_MS))
+def log_job():
+    logger.info(f"Received epochs: {received_epochs}, "
+                f"Time syncs: {time_syncs}, "
+                f"Delta: {delta}")
+
+
+tl.start(block=True)
