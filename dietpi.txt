@@ -80,7 +80,7 @@ AUTO_SETUP_BACKUP_RESTORE=0
 
 ##### Software Options #####
 # SSH server choice: 0=none/custom | -1=Dropbear | -2=OpenSSH
-AUTO_SETUP_SSH_SERVER_INDEX=-2
+AUTO_SETUP_SSH_SERVER_INDEX=-1
 
 # Logging mode choice: 0=none/custom | -1=RAMlog 1h clear | -2=RAMlog 1h save clear | -3=rsyslog + logrotate
 AUTO_SETUP_LOGGING_INDEX=-1
