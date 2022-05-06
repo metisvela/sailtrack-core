@@ -41,13 +41,14 @@ def on_message_callback(client, userdata, message):
 
 config = ConfigParser()
 config.read(CONFIG_FILE_PATH)
+
 mqtt = Client(MQTT_CLIENT_ID)
 mqtt.username_pw_set(config["mqtt"]["username"], config["mqtt"]["password"])
 mqtt.on_message = on_message_callback
 mqtt.connect(config["mqtt"]["host"])
 mqtt.loop_start()
 mqtt.subscribe("sensor/gps0")
-tl = Timeloop()
+
 formatter = logging.Formatter(config.get("log", "format", raw=True))
 logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
 logger = logging.getLogger(MQTT_CLIENT_ID)
@@ -55,6 +56,8 @@ logger.setLevel(logging.INFO)
 handler = logging.StreamHandler()
 handler.setFormatter(formatter)
 logger.addHandler(handler)
+
+tl = Timeloop()
 
 
 @tl.job(interval=timedelta(milliseconds=LOG_JOB_INTERVAL_MS))
