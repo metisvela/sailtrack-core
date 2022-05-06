@@ -62,6 +62,8 @@ mqtt.on_publish = on_publish_callback
 mqtt.connect(config["mqtt"]["host"])
 mqtt.loop_start()
 
+tl = Timeloop()
+
 formatter = logging.Formatter(config.get("log", "format", raw=True))
 logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
 logger = logging.getLogger(MQTT_CLIENT_ID)
@@ -75,8 +77,6 @@ battery_charging = DigitalInputDevice(CHARGE_PIN)
 cpu_temperature = CPUTemperature()
 cpu_load = LoadAverage()
 disk_load = DiskUsage()
-
-tl = Timeloop()
 
 
 @tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
