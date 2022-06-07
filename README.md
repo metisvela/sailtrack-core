@@ -16,7 +16,7 @@ The SailTrack Core module is based on a battery powered Raspberry Pi SBC running
 
 <p align="center">
   <br/>
-  <img src="https://raw.githubusercontent.com/metis-vela-unipd/sailtrack-core/main/hardware/wiring-diagram.svg">
+  <img src="https://raw.githubusercontent.com/metis-vela-unipd/sailtrack-core/main/hardware/connection-diagram.svg">
 </p>
 
 ## Installation
