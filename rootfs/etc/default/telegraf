@@ -1,6 +1,6 @@
 INFLUX_URL="http://192.168.42.1:8086"
 INFLUX_USER="admin"
-INFLUX_PASSWORD="dietpi"
+INFLUX_PASSWORD="sailtrack"
 MQTT_SERVER="tcp://192.168.42.1:1883"
 MQTT_USER="mosquitto"
-MQTT_PASSWORD="dietpi"
+MQTT_PASSWORD="sailtrack"

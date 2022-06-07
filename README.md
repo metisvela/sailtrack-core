@@ -46,7 +46,7 @@ Follow the instructions below to get the SailTrack Core OS correctly installed. 
       ssh root@<raspberry-ip-address>
       ```
 
-      The `<raspberry-ip-address>` can be found by checking the router administration dashboard or by using a tool such as [Angry IP Scanner](https://angryip.org). The password is the default one (`dietpi`) or the one set in Step 4.
+      The `<raspberry-ip-address>` can be found by checking the router administration dashboard or by using a tool such as [Angry IP Scanner](https://angryip.org). The password is the default one (`sailtrack`) or the one set in Step 4.
 
    2. Dismiss the `DietPi first run setup is currently running on another screen` message by hitting <kbd>Ctrl</kbd> + <kbd>C</kbd>.
 
@@ -66,7 +66,7 @@ Once the installation process has been successfully completed, you can use SailT
 
 1. Power on the module by pressing the power push button. Once the WiFi network has been created, SailTrack Core will start collecting the measurements coming from the external modules.
 2. Connect to the `SailTrack-CoreNet` WiFi network with your pc, smartphone, tablet,....
-3. Visit http://192.168.42.1:3001 (user: `admin`, password: `dietpi` or the one set in Step 4 of the installation) to connect to the Grafana dashboards to see real-time data and browse the database. To learn more about using Grafana, visit the [official guide](https://grafana.com/docs/grafana/latest/getting-started/getting-started/).
+3. Visit http://192.168.42.1:3001 (user: `admin`, password: `sailtrack` or the one set in Step 4 of the installation) to connect to the Grafana dashboards to see real-time data and browse the database. To learn more about using Grafana, visit the [official guide](https://grafana.com/docs/grafana/latest/getting-started/getting-started/).
 
 ## Contributing
 
