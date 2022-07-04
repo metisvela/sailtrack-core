@@ -12,7 +12,7 @@
 
 SailTrack Core is the central component of the SailTrack system, it manages connections and gathers data. To learn more about the SailTrack project, please visit the [documentation repository](https://github.com/metis-vela-unipd/sailtrack-docs).
 
-The SailTrack Core module is based on a battery powered Raspberry Pi SBC running a custom version of the Raspberry Pi OS, namely, [DietPi](https://dietpi.com). For a more detailed hardware description of the module, please refer to the [Bill Of Materials](hardware/BOM.csv).
+The SailTrack Core module is based on a battery powered Raspberry Pi SBC running a custom version of the Raspberry Pi OS, namely, [DietPi](https://dietpi.com). For a more detailed hardware description of the module, please refer to the [Bill Of Materials](hardware/BOM.csv). The 3D-printable enclosure con be found [here](hardware/STL).
 
 <p align="center">
   <br/>
