@@ -16,9 +16,8 @@ The SailTrack Core module is based on a battery powered Raspberry Pi SBC running
 
 <p align="center">
   <br/>
-  <img src="hardware/connection-diagram.svg">
+  <img src="hardware/Connection Diagram.svg">
 </p>
-
 ## Installation
 
 Follow the instructions below to get the SailTrack Core OS correctly installed. If you encounter any problem, please [open an issue](https://github.com/metis-vela-unipd/sailtrack-core/issues/new).
