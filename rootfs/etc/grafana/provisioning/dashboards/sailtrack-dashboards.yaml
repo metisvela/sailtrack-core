@@ -1,0 +1,7 @@
+apiVersion: 1
+
+providers:
+  - name: "SailTrack"
+    options:
+      path: /boot/sailtrack/dashboards
+      foldersFromFilesStructure: true

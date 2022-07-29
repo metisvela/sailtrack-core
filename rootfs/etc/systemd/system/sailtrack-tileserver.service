@@ -1,0 +1,10 @@
+[Unit]
+Description=SailTrack-TileServer
+
+[Service]
+Restart=on-failure
+WorkingDirectory=/boot/sailtrack/maps
+ExecStart=/usr/bin/python3 -m http.server
+
+[Install]
+WantedBy=multi-user.target

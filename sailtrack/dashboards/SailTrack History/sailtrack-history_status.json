@@ -1,0 +1,118 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": {
+          "type": "grafana",
+          "uid": "-- Grafana --"
+        },
+        "enable": false,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        },
+        "type": "dashboard"
+      },
+      {
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "red",
+        "name": "Capsizes",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [
+            "capsize"
+          ],
+          "type": "tags"
+        }
+      },
+      {
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "orange",
+        "name": "Regattas",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [
+            "regatta"
+          ],
+          "type": "tags"
+        }
+      },
+      {
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "green",
+        "name": "Trainings",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [
+            "training"
+          ],
+          "type": "tags"
+        }
+      },
+      {
+        "datasource": {
+          "type": "datasource",
+          "uid": "grafana"
+        },
+        "enable": true,
+        "hide": true,
+        "iconColor": "blue",
+        "name": "Annotations",
+        "target": {
+          "limit": 100,
+          "matchAny": false,
+          "tags": [],
+          "type": "dashboard"
+        }
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "links": [],
+  "liveNow": false,
+  "panels": [],
+  "schemaVersion": 36,
+  "style": "dark",
+  "tags": [
+    "history"
+  ],
+  "templating": {
+    "list": []
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Status History",
+  "uid": "KOVWGVk4k",
+  "version": 1,
+  "weekStart": ""
+}

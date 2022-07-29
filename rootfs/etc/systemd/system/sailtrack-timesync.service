@@ -2,6 +2,7 @@
 Description=SailTrack-TimeSync
 
 [Service]
+EnvironmentFile=-/etc/default/sailtrack
 Restart=on-failure
 ExecStart=/boot/sailtrack/sailtrack-timesync
 

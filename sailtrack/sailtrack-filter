@@ -1,0 +1,270 @@
+#!/usr/bin/env python3
+
+import json
+import logging
+import math
+import os
+from datetime import timedelta
+
+import numpy as np
+from filterpy.kalman import KalmanFilter
+from paho.mqtt.client import Client
+from timeloop import Timeloop
+
+# -------------------------- Configuration -------------------------- #
+
+KALMAN_SAMPLE_TIME = 0.01
+MQTT_PUBLISH_FREQ_HZ = 5
+
+MQTT_CLIENT_ID = "sailtrack-filter_boat"
+
+MQTT_JOB_INTERVAL_MS = 1000 / MQTT_PUBLISH_FREQ_HZ
+
+# ------------------------------------------------------------------- #
+
+MPS_TO_KNOTS_MULTIPLIER = 1.94384
+EARTH_CIRCUMFERENCE_METERS = 40075 * 1000
+LAT_FACTOR = 1
+
+gps_ref = {}
+gps_data = {}
+imu_data = {}
+orientation = {
+    "heading": 0,
+    "pitch": 0,
+    "roll": 0
+}
+wind_metrics = {}
+body2world_mtx = []
+body2sailor_mtx = np.matrix([[0, 1],
+                            [-1, 0]])
+def angle_wrap_180(angle):
+    if angle > 180:
+        angle -= 360
+    return angle
+
+
+def on_message_callback_gps(client, userdata, message):
+    global gps_ref
+    global gps_data
+    global LAT_FACTOR
+
+    gps_data = json.loads(message.payload)
+
+    gps_data["lat"] *= 10 ** -7
+    gps_data["lon"] *= 10 ** -7
+    gps_data["hMSL"] *= 10 ** -3
+
+    gps_data["velN"] *= 10 ** -3
+    gps_data["velE"] *= 10 ** -3
+    gps_data["velD"] *= 10 ** -3
+
+    gps_data["hAcc"] *= 10 ** -3
+    gps_data["vAcc"] *= 10 ** -3
+    gps_data["sAcc"] *= 10 ** -3
+
+    if not gps_ref:
+        gps_ref = gps_data
+
+    LAT_FACTOR = math.cos(math.radians(gps_data["lat"] + gps_ref["lat"]) / 2)
+
+
+def on_message_callback_imu(client, userdata, message):
+    global imu_data
+    global orientation
+    global body2world_mtx
+    imu_data = json.loads(message.payload)
+
+    orientation["heading"] = 360 - imu_data["euler"]["z"]
+    orientation["pitch"] = - imu_data["euler"]["y"]
+    orientation["roll"] = imu_data["euler"]["x"]
+
+    # Rotate linear acceleration from Body Reference Frame (BRF) to World Reference Frame (WRT)
+
+    body2world_mtx = np.matrix([
+        [math.cos(math.radians(orientation["heading"])), math.sin(math.radians(orientation["heading"])), 0],
+        [-math.sin(math.radians(orientation["heading"])), math.cos(math.radians(orientation["heading"])), 0],
+        [0, 0, 1]
+    ])
+
+    linear_accel_wrf = body2world_mtx @ np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
+
+    imu_data["linearAccel"]["x"] = linear_accel_wrf[0]
+    imu_data["linearAccel"]["y"] = linear_accel_wrf[1]
+    imu_data["linearAccel"]["z"] = linear_accel_wrf[2]
+
+def on_message_callback_wind(client, userdata, message):
+    global wind_data
+    wind_data = json.loads(message.payload)
+
+
+# STATE SPACE MODEL FOR WIND DYNAMICS
+def wind_filter_init():
+    wind_trs_mtx = np.identity(2)
+    mean_mtx = 1 / 2 * np.matrix([  # matrix that takes mean from the sensors measures
+        [1, 0, 1, 0, 0, 0],
+        [0, 1, 0, 0, 1, 0],
+        [0, 0, 0, 1, 0, 1]
+    ])
+
+    aw_to_meas_mtx = np.matrix([  # apparent wind to sensor measure matrix
+        [- math.sqrt(3) / 2, - math.sqrt(3) / 2],
+        [1 / 2, -1 / 2],
+        [- math.sqrt(3) / 2, 0],
+        [1 / 2, 1],
+        [- math.sqrt(3) / 2, 0],
+        [-1 / 2, 1]
+    ])
+
+    wind_out_mtx = mean_mtx @ aw_to_meas_mtx
+    w_std = 1000
+
+    r_std = 100
+    noise_state_cov = (w_std ** 2) * np.identity(2)  # State error covariance matrix Q
+    noise_meas_cov = np.diag([r_std ** 2, r_std ** 2, r_std ** 2])  # Measure error covariance matrix R
+
+    # KALMAN FILTER INIT
+    wind_state_dim = (2, 1)
+    wind_meas_dim = (3, 1)
+
+    kalman = KalmanFilter(dim_x=wind_state_dim[0], dim_z=wind_meas_dim[0])
+    kalman.x = np.zeros(wind_state_dim)
+    kalman.F = wind_trs_mtx
+    kalman.H = wind_out_mtx
+    kalman.P = noise_state_cov
+    kalman.R = noise_meas_cov
+    return kalman
+
+# STATE SPACE MODEL FOR POSITION DYNAMICS
+def boat_filter_init(sample_time):
+    w_std = 0.01         # State noise standard deviation
+    transition_mtx = np.matrix([[1, 0, 0, sample_time, 0, 0],
+                                [0, 1, 0, 0, sample_time, 0],
+                                [0, 0, 1, 0, 0, sample_time],
+                                [0, 0, 0, 1, 0, 0],
+                                [0, 0, 0, 0, 1, 0],
+                                [0, 0, 0, 0, 0, 1]])
+
+    input_mtx = np.matrix([[(sample_time ** 2) / 2, 0, 0],
+                           [0, (sample_time ** 2) / 2, 0],
+                           [0, 0, (sample_time ** 2) / 2],
+                           [sample_time, 0, 0],
+                           [0, sample_time, 0],
+                           [0, 0, sample_time]])
+
+    output_mtx = np.eye(6)
+    noise_state_cov = input_mtx @ input_mtx.T * (w_std ** 2)                # State error covariance matrix Q
+
+    state_dim = (6, 1)
+    meas_dim = (6, 1)
+    input_dim = (3, 1)
+
+    kalman = KalmanFilter(dim_x=state_dim[0], dim_z=meas_dim[0], dim_u=input_dim[0])
+    kalman.x = np.zeros(state_dim)
+    kalman.F = transition_mtx
+    kalman.B = input_mtx
+    kalman.H = output_mtx
+    kalman.P = noise_state_cov
+    return kalman
+
+
+mqtt = Client(MQTT_CLIENT_ID)
+mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
+mqtt.message_callback_add("sensor/gps0", on_message_callback_gps)
+mqtt.message_callback_add("sensor/imu0", on_message_callback_imu)
+mqtt.message_callback_add("sensor/wind0", on_message_callback_wind)
+mqtt.connect("localhost")
+mqtt.subscribe("sensor/gps0")
+mqtt.subscribe("sensor/imu0")
+mqtt.subscribe("sensor/wind0")
+mqtt.loop_start()
+
+tl = Timeloop()
+@tl.job(interval=timedelta(seconds=KALMAN_SAMPLE_TIME))
+def boat_kalman_job():
+
+    gps_rel_pos = [
+        (gps_data["lon"] - gps_ref["lon"]) * EARTH_CIRCUMFERENCE_METERS * LAT_FACTOR / 360,
+        (gps_data["lat"] - gps_ref["lat"]) * EARTH_CIRCUMFERENCE_METERS / 360,
+        gps_data["hMSL"] - gps_ref["hMSL"]
+    ]
+    gps_ned_velocity = [
+        gps_data["velN"],
+        gps_data["velE"],
+        gps_data["velD"],
+    ]
+    r_gain = 2500000
+    kalman_boat.R = r_gain*np.diag([gps_data["hAcc"], gps_data["hAcc"], gps_data["vAcc"],
+                                    gps_data["sAcc"], gps_data["sAcc"], gps_data["sAcc"]])
+
+    measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
+    kalman_boat.update(measure)
+
+    if imu_data:
+        acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
+        kalman_boat.predict(acc_input)
+
+@tl.job(interval=timedelta(seconds=KALMAN_SAMPLE_TIME))
+def wind_kalman_job():
+    measure = np.array([wind_data.get("FL", 0),
+                        wind_data.get("FR", 0),
+                        wind_data.get("RL", 0)])
+    kalman_wind.update(measure)
+    kalman_wind.predict()
+
+
+@tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
+def mqtt_job():
+    pos_x = kalman_boat.x[0, 0]
+    pos_y = kalman_boat.x[1, 0]
+    pos_z = kalman_boat.x[2, 0]
+    speed_x = kalman_boat.x[3, 0]
+    speed_y = kalman_boat.x[4, 0]
+    speed_z = kalman_boat.x[5, 0]
+    sog = math.sqrt(speed_x ** 2 + speed_y ** 2) * MPS_TO_KNOTS_MULTIPLIER
+    cog = math.degrees(np.arctan2(pos_y, pos_x))
+    lon = pos_x * 360 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR + gps_ref["lat"]
+    lat = pos_y * 360 / EARTH_CIRCUMFERENCE_METERS + gps_ref["lon"]
+    altitude = pos_z + gps_ref["hMSL"]
+    global_xy_speed = np.array([speed_x, speed_y, 0]).reshape(3, 1)
+    boat_xy_speed = body2world_mtx.T @ global_xy_speed
+    twx = kalman_wind.x[0]-boat_xy_speed[0]
+    twy = kalman_wind.x[1]-boat_xy_speed[1]
+    tw_xy = np.array([twx, twy]).reshape(2, 1)
+    tw_sailor = body2sailor_mtx @ tw_xy
+    tws = math.sqrt(twx**2+twy**2)
+    twa = math.degrees(math.atan2(tw_sailor[0], tw_sailor[1]))
+    twd = np.mod(orientation["heading"] + twa, 360)
+    mqtt.publish("boat", json.dumps({
+        "lon": lon,
+        "lat": lat,
+        "cog": angle_wrap_180(cog),                                  # toDo convert from 180/-180 to 0/360
+        "sog": sog,
+        "altitude": altitude,
+        "ascensionSpeed": speed_z,
+        "heading": orientation["heading"],
+        "pitch": angle_wrap_180(orientation["pitch"]),
+        "roll": angle_wrap_180(orientation["roll"])
+    }))
+    mqtt.publish("wind", json.dumps({
+        "tws": tws,
+        "twd": angle_wrap_180(twd),
+    }))
+
+
+formatter = logging.Formatter("[%(levelname)s] %(message)s")
+logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
+logger = logging.getLogger(MQTT_CLIENT_ID)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+kalman_wind = wind_filter_init()
+kalman_boat = boat_filter_init(KALMAN_SAMPLE_TIME)
+
+# Waiting for the first GPS message
+logger.info("Waiting first GPS position")
+while not gps_data:
+    pass
+tl.start(block=True)

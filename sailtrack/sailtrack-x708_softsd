@@ -1,5 +1,10 @@
 #!/bin/bash
 
+if [ "$EUID" -ne 0 ]
+  then echo "poweroff: permission denied"
+  exit
+fi
+
 BUTTON_PIN=13
 SLEEP_TIME_SEC=4
 

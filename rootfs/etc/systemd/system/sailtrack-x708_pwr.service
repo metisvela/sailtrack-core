@@ -5,7 +5,7 @@ Before=dietpi-preboot.service
 
 [Service]
 Restart=on-failure
-ExecStart=/boot/sailtrack-x708_pwr
+ExecStart=/boot/sailtrack/sailtrack-x708_pwr
 
 [Install]
 WantedBy=multi-user.target
