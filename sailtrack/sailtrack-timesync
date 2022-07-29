@@ -2,8 +2,8 @@
 
 import json
 import logging
+import os
 import time
-from configparser import ConfigParser
 from datetime import timedelta
 
 from paho.mqtt.client import Client
@@ -15,7 +15,6 @@ TIMESYNC_DELTA_THRESHOLD = 1
 LOG_PRINT_FREQ_HZ = 0.1
 
 MQTT_CLIENT_ID = "sailtrack-timesync"
-CONFIG_FILE_PATH = "/etc/sailtrack/sailtrack.conf"
 
 LOG_JOB_INTERVAL_MS = 1000 / LOG_PRINT_FREQ_HZ
 
@@ -39,19 +38,16 @@ def on_message_callback(client, userdata, message):
             time_syncs += 1
 
 
-config = ConfigParser()
-config.read(CONFIG_FILE_PATH)
-
 mqtt = Client(MQTT_CLIENT_ID)
-mqtt.username_pw_set(config["mqtt"]["username"], config["mqtt"]["password"])
+mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
 mqtt.on_message = on_message_callback
-mqtt.connect(config["mqtt"]["host"])
+mqtt.connect("localhost")
 mqtt.loop_start()
 mqtt.subscribe("sensor/gps0")
 
 tl = Timeloop()
 
-formatter = logging.Formatter(config.get("log", "format", raw=True))
+formatter = logging.Formatter("[%(levelname)s] %(message)s")
 logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
 logger = logging.getLogger(MQTT_CLIENT_ID)
 logger.setLevel(logging.INFO)
