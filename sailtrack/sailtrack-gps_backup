@@ -20,19 +20,15 @@ mqtt.loop_start()
 
 data = {}
 ser = serial.Serial('/dev/serial0')
-logger.info("test 24")
 for line in ser:
     line = str(line)
-    #logger.info(line)
     fields = line.split(',')
-    #logger.info(fields)
     if line.startswith("b'$GPGGA"):
-        data['lat'] = float(fields[2]) * 10**5
-        data['lon'] = float(fields[4]) * 10**5
-        data['hMSL'] = fields[9]
+        data['lat'] = float(fields[2]) * (10 ** 5)
+        data['lon'] = float(fields[4]) * (10 ** 5)
+        data['hMSL'] = float(fields[9])
     if line.startswith("b'$GPVTG"):
-        data['gSpeed'] = fields[5]
-    logger.info(data)
+        data['gSpeed'] = float(fields[5]) * (10 ** 3)
     if len(data) == 4:
         mqtt.publish("sensor/gps0", json.dumps(data))
         data = {}
