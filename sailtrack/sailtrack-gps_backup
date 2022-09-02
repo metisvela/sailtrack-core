@@ -1,0 +1,38 @@
+#!/usr/bin/env python3
+
+import json
+import serial
+from paho.mqtt.client import Client
+import os
+import logging
+
+formatter = logging.Formatter("[%(levelname)s %(message)s")
+logger = logging.getLogger("sailtrack-gps_backup")
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+mqtt = Client("sailtrack-gps_backup")
+mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
+mqtt.connect("localhost")
+mqtt.loop_start()
+
+data = {}
+ser = serial.Serial('/dev/serial0')
+logger.info("test 24")
+for line in ser:
+    line = str(line)
+    #logger.info(line)
+    fields = line.split(',')
+    #logger.info(fields)
+    if line.startswith("b'$GPGGA"):
+        data['lat'] = float(fields[2]) * 10**5
+        data['lon'] = float(fields[4]) * 10**5
+        data['hMSL'] = fields[9]
+    if line.startswith("b'$GPVTG"):
+        data['gSpeed'] = fields[5]
+    logger.info(data)
+    if len(data) == 4:
+        mqtt.publish("sensor/gps0", json.dumps(data))
+        data = {}

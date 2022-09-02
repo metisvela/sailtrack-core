@@ -1,0 +1,10 @@
+[Unit]
+Description=SailTrack-GPSBackup
+
+[Service]
+EnvironmentFile=-/etc/default/sailtrack
+Restart=on-failure
+ExecStart=/boot/sailtrack/sailtrack-gps_backup
+
+[Install]
+WantedBy=multi-user.target
