@@ -142,7 +142,7 @@ def wind_filter_init():
 
 # STATE SPACE MODEL FOR POSITION DYNAMICS
 def boat_filter_init(sample_time):
-    w_std = 1         # State noise standard deviation
+    w_std = 0.01         # State noise standard deviation
     transition_mtx = np.matrix([[1, 0, 0, sample_time, 0, 0],
                                 [0, 1, 0, 0, sample_time, 0],
                                 [0, 0, 1, 0, 0, sample_time],
@@ -197,8 +197,9 @@ def boat_kalman_job():
         gps_data["velE"],
         -gps_data["velD"],
     ]
-    kalman_boat.R = np.diag([gps_data["hAcc"], gps_data["hAcc"], gps_data["vAcc"],
-                             gps_data["sAcc"], gps_data["sAcc"], gps_data["sAcc"]])
+    r_gain = 1000
+    kalman_boat.R = r_gain * np.diag([gps_data["hAcc"]**2, gps_data["hAcc"]**2, gps_data["vAcc"]**2,
+                                      gps_data["sAcc"]**2, gps_data["sAcc"]**2, gps_data["sAcc"]**2])
 
     measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
     kalman_boat.update(measure)
