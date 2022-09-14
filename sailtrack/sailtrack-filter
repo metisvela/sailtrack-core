@@ -6,9 +6,9 @@ import math
 from datetime import timedelta
 from time import sleep
 import os
+from sailtrackSMFLibrary import KalmanFilter
 
 import numpy as np
-from filterpy.kalman import KalmanFilter
 from paho.mqtt.client import Client
 from timeloop import Timeloop
 
@@ -131,14 +131,12 @@ def wind_filter_init():
 
     # KALMAN FILTER INIT
     wind_state_dim = (2, 1)
-    wind_meas_dim = (3, 1)
 
-    kalman = KalmanFilter(dim_x=wind_state_dim[0], dim_z=wind_meas_dim[0])
-    kalman.x = np.zeros(wind_state_dim)
-    kalman.F = wind_trs_mtx
-    kalman.H = wind_out_mtx
-    kalman.P = noise_state_cov
-    kalman.R = noise_meas_cov
+    kalman = KalmanFilter(x_init=np.zeros(wind_state_dim),
+                          P_init=np.diag(np.ones(wind_state_dim)),
+                          F=wind_trs_mtx,
+                          H=wind_out_mtx,
+                          R=noise_state_cov)
     return kalman
 
 # STATE SPACE MODEL FOR POSITION DYNAMICS
@@ -165,12 +163,12 @@ def boat_filter_init(sample_time):
     meas_dim = (6, 1)
     input_dim = (3, 1)
 
-    kalman = KalmanFilter(dim_x=state_dim[0], dim_z=meas_dim[0], dim_u=input_dim[0])
-    kalman.x = np.zeros(state_dim)
-    kalman.F = transition_mtx
-    kalman.B = input_mtx
-    kalman.H = output_mtx
-    kalman.P = noise_state_cov
+    kalman = KalmanFilter(np.zeros(state_dim),
+                          np.diag(np.ones(state_dim)),
+                          transition_mtx,
+                          input_dim,
+                          output_mtx,
+                          noise_state_cov)
     return kalman
 
 mqtt = Client(MQTT_CLIENT_ID)
@@ -198,12 +196,11 @@ def boat_kalman_job():
         gps_data["velE"],
         -gps_data["velD"],
     ]
-    r_gain = 1000
-    kalman_boat.R = r_gain * np.diag([gps_data["hAcc"]**2, gps_data["hAcc"]**2, gps_data["vAcc"]**2,
-                                      gps_data["sAcc"]**2, gps_data["sAcc"]**2, gps_data["sAcc"]**2])
+    kalman_boat.R = 0.25*np.diag([gps_data["hAcc"]**2, gps_data["hAcc"]**2, gps_data["vAcc"]**2,
+                                  gps_data["sAcc"]**2, gps_data["sAcc"]**2, gps_data["sAcc"]**2])
 
     measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
-    kalman_boat.update(measure)
+    kalman_boat.filter(measure)
 
     if imu_data:
         acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
@@ -214,7 +211,7 @@ def wind_kalman_job():
     measure = np.array([wind_data.get("FL", 0),
                         wind_data.get("FR", 0),
                         wind_data.get("RL", 0)])
-    kalman_wind.update(measure)
+    kalman_wind.filter(measure)
     kalman_wind.predict()
 
 
