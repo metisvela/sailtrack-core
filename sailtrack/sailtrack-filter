@@ -45,10 +45,12 @@ ned2neu_mtx = np.matrix([[1, 0, 0],
                          [0, 1, 0],
                          [0, 0, -1]])
 
+
 def angle_wrap_180(angle):
     if angle > 180:
         angle -= 360
     return angle
+
 
 def on_message_callback_gps(client, userdata, message):
     global gps_ref
@@ -99,6 +101,7 @@ def on_message_callback_imu(client, userdata, message):
     imu_data["linearAccel"]["y"] = linear_accel_wrf[1]
     imu_data["linearAccel"]["z"] = linear_accel_wrf[2]
 
+
 def on_message_callback_wind(client, userdata, message):
     global wind_data
     wind_data = json.loads(message.payload)
@@ -139,9 +142,10 @@ def wind_filter_init():
                           R=noise_state_cov)
     return kalman
 
+
 # STATE SPACE MODEL FOR POSITION DYNAMICS
 def boat_filter_init(sample_time):
-    w_std = 0.1         # State noise standard deviation
+    w_std = 0.1  # State noise standard deviation
     transition_mtx = np.matrix([[1, 0, 0, sample_time, 0, 0],
                                 [0, 1, 0, 0, sample_time, 0],
                                 [0, 0, 1, 0, 0, sample_time],
@@ -157,19 +161,18 @@ def boat_filter_init(sample_time):
                            [0, 0, sample_time]])
 
     output_mtx = np.eye(6)
-    noise_state_cov = input_mtx @ input_mtx.T * (w_std ** 2)                # State error covariance matrix Q
+    noise_state_cov = input_mtx @ input_mtx.T * (w_std ** 2)  # State error covariance matrix Q
 
     state_dim = (6, 1)
-    meas_dim = (6, 1)
-    input_dim = (3, 1)
 
-    kalman = KalmanFilter(np.zeros(state_dim),
-                          np.diag(np.ones(state_dim)),
-                          transition_mtx,
-                          input_dim,
-                          output_mtx,
-                          noise_state_cov)
+    kalman = KalmanFilter(x_init=np.zeros(state_dim),
+                          P_init=noise_state_cov,
+                          F=transition_mtx,
+                          G=input_mtx,
+                          H=output_mtx,
+                          Q=noise_state_cov)
     return kalman
+
 
 mqtt = Client(MQTT_CLIENT_ID)
 mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
@@ -183,9 +186,10 @@ mqtt.subscribe("sensor/wind0")
 mqtt.loop_start()
 
 tl = Timeloop()
+
+
 @tl.job(interval=timedelta(seconds=KALMAN_SAMPLE_TIME))
 def boat_kalman_job():
-
     gps_rel_pos = [
         (gps_data["lat"] - gps_ref["lat"]) * EARTH_CIRCUMFERENCE_METERS / 360,
         (gps_data["lon"] - gps_ref["lon"]) * EARTH_CIRCUMFERENCE_METERS * LAT_FACTOR / 360,
@@ -196,15 +200,16 @@ def boat_kalman_job():
         gps_data["velE"],
         -gps_data["velD"],
     ]
-    kalman_boat.R = 0.25*np.diag([gps_data["hAcc"]**2, gps_data["hAcc"]**2, gps_data["vAcc"]**2,
-                                  gps_data["sAcc"]**2, gps_data["sAcc"]**2, gps_data["sAcc"]**2])
-
-    measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
-    kalman_boat.filter(measure)
-
+    kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
+                                    gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
+    # Time Update
     if imu_data:
         acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
         kalman_boat.predict(acc_input)
+    measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
+    # Measure Update
+    kalman_boat.filter(measure)
+
 
 @tl.job(interval=timedelta(seconds=KALMAN_SAMPLE_TIME))
 def wind_kalman_job():
@@ -213,7 +218,6 @@ def wind_kalman_job():
                         wind_data.get("RL", 0)])
     kalman_wind.filter(measure)
     kalman_wind.predict()
-
 
 
 @tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
@@ -232,18 +236,18 @@ def mqtt_job():
     if sog > 0.5:
         cog_180 = angle_wrap_180(cog)
         head_180 = angle_wrap_180(orientation["heading"])
-        drift = abs(head_180-cog_180)
+        drift = abs(head_180 - cog_180)
         if head_180 > cog_180:
             drift = -drift
-    twx = kalman_wind.x[0]-boat_xy_speed[0]
-    twy = kalman_wind.x[1]-boat_xy_speed[1]
-    tw_xy = np.array([twx.item(), twy.item(), 0],).reshape(3, 1)
+    twx = kalman_wind.x[0] - boat_xy_speed[0]
+    twy = kalman_wind.x[1] - boat_xy_speed[1]
+    tw_xy = np.array([twx.item(), twy.item(), 0], ).reshape(3, 1)
     twx = tw_xy[0]
     twy = tw_xy[1]
-    tws = math.sqrt(twx**2+twy**2)*MPS_TO_KNOTS_MULTIPLIER
+    tws = math.sqrt(twx ** 2 + twy ** 2) * MPS_TO_KNOTS_MULTIPLIER
     twa = math.degrees(math.atan2(twy, tws))
     twd = np.mod(orientation["heading"] + twa, 360)
-    twd = twd if twd > 0 else 360-twd
+    twd = twd if twd > 0 else 360 - twd
     mqtt.publish("boat", json.dumps({
         "lon": lon,
         "lat": lat,
