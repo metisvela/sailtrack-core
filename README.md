@@ -57,8 +57,6 @@ Follow the instructions below to get the SailTrack Core OS correctly installed. 
 
 9. Wait until the `SailTrack-CoreNet` WiFi network is visible, meaning that the installation process has been successfully completed.
 
-10. Congratulations! You've successfully installed the SailTrack Core OS.
-
 ## Usage
 
 Once the installation process has been successfully completed, you can use SailTrack Core by following the steps below.
