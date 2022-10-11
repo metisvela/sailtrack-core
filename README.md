@@ -34,37 +34,23 @@ The module performs the following tasks:
 Follow the instructions below to get the SailTrack Core OS correctly installed. If you encounter any problem, please [open an issue](https://github.com/metis-vela-unipd/sailtrack-core/issues/new).
 
 1. [Download](https://github.com/metis-vela-unipd/sailtrack-core/releases/latest/download/SailTrack-Core_RPi-ARMv8-Bullseye.7z) and extract the latest SailTrack Core OS image.
-
 2. Insert the Raspberry Pi microSD card into the computer.
-
 3. Flash the downloaded `.img` file into the SD card using a flashing tool such as [balenaEtcher](https://www.balena.io/etcher/).
-
 4. **(OPTIONAL)** Change the passwords from the default ones by modifying the `AUTO_SETUP_GLOBAL_PASSWORD` and the `SOFTWARE_WIFI_HOTSPOT_KEY` in the `dietpi.txt` file located inside the SD card.
-
 5. Eject the SD card from the computer and insert it into the Raspberry Pi.
-
 6. Connect the Raspberry Pi to internet with an ethernet cable.
-
 7. Power on the Raspberry Pi. The first run setup will automatically start to download and configure the required packages. *Note: this might take a few minutes, depending on the internet connection quality, follow the next step to check the installation progress.*
-
 8. **(OPTIONAL)** Check the installation progress:
-
    1. Connect to the Raspberry Pi using a device connected to the same network:
-
       ```
       ssh root@<raspberry-ip-address>
       ```
-
       The `<raspberry-ip-address>` can be found by checking the router administration dashboard or by using a tool such as [Angry IP Scanner](https://angryip.org). The password is the default one (`sailtrack`) or the one set in Step 4.
-
    2. Dismiss the `DietPi first run setup is currently running on another screen` message by hitting <kbd>Ctrl</kbd> + <kbd>C</kbd>.
-
    3. Check the logs coming from the installation progress with the following command:
-
       ```
       tail -f /var/tmp/dietpi/logs/dietpi-firstrun-setup.log
       ```
-
 9. Wait until the `SailTrack-CoreNet` WiFi network is visible, meaning that the installation process has been successfully completed.
 
 ## Usage
