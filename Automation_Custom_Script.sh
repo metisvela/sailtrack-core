@@ -17,12 +17,12 @@ G_CONFIG_INJECT "+ telegraf" "+ telegraf" /boot/dietpi/.dietpi-services_include_
 G_CONFIG_INJECT "+ sailtrack-status" "+ sailtrack-status" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-timesync" "+ sailtrack-timesync" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-tileserver" "+ sailtrack-tileserver" /boot/dietpi/.dietpi-services_include_exclude
-G_CONFIG_INJECT "+ sailtrack-filter" "+ sailtrack-filter" /boot/dietpi/.dietpi-services_include_exclude
+G_CONFIG_INJECT "+ sailtrack-processor" "+ sailtrack-processor" /boot/dietpi/.dietpi-services_include_exclude
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled telegraf
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-status
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-timesync
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-tileserver
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-filter
+G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-processor
 
 # Configure DietPi Banner
 G_EXEC touch /boot/dietpi/.dietpi-banner

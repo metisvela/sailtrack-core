@@ -1,10 +1,10 @@
 [Unit]
-Description=SailTrack-Filter
+Description=SailTrack-Processor
 
 [Service]
 EnvironmentFile=-/etc/default/sailtrack
 Restart=on-failure
-ExecStart=/boot/sailtrack/sailtrack-filter
+ExecStart=/boot/sailtrack/sailtrack-processor
 
 [Install]
 WantedBy=multi-user.target

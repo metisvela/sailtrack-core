@@ -1,0 +1,115 @@
+#!/usr/bin/env python3
+
+import json
+import logging
+import os
+import sys
+from collections import deque
+from datetime import timedelta
+
+from paho.mqtt.client import Client
+from timeloop import Timeloop
+
+# -------------------------- Configuration -------------------------- #
+
+MQTT_PUBLISH_FREQ_HZ = 5
+LOG_PRINT_FREQ_HZ = 0.1
+
+MQTT_CLIENT_ID = "sailtrack-processor"
+
+MQTT_JOB_INTERVAL_MS = 1000 / MQTT_PUBLISH_FREQ_HZ
+LOG_JOB_INTERVAL_MS = 1000 / LOG_PRINT_FREQ_HZ
+
+MULTIPLIER_MMS_TO_KNOTS = 0.00194384
+MULTIPLIER_UDEGREE_TO_DEGREE = 1e-5
+MULTIPLIER_NDEGREE_TO_DEGREE = 1e-7
+
+MOVAVG_WINDOW_SIZE_LON = 30
+MOVAVG_WINDOW_SIZE_LAT = 30
+MOVAVG_WINDOW_SIZE_SOG = 30
+MOVAVG_WINDOW_SIZE_COG = 30
+MOVAVG_WINDOW_SIZE_HEADING = 30
+MOVAVG_WINDOW_SIZE_PITCH = 30
+MOVAVG_WINDOW_SIZE_ROLL = 30
+
+# ------------------------------------------------------------------- #
+
+buffer = {
+    "lon": deque(MOVAVG_WINDOW_SIZE_LON * [0], MOVAVG_WINDOW_SIZE_LON),
+    "lat": deque(MOVAVG_WINDOW_SIZE_LAT * [0], MOVAVG_WINDOW_SIZE_LAT),
+    "sog": deque(MOVAVG_WINDOW_SIZE_SOG * [0], MOVAVG_WINDOW_SIZE_SOG),
+    "cog": deque(MOVAVG_WINDOW_SIZE_COG * [0], MOVAVG_WINDOW_SIZE_COG),
+    "heading": deque(MOVAVG_WINDOW_SIZE_HEADING * [0], MOVAVG_WINDOW_SIZE_HEADING),
+    "pitch": deque(MOVAVG_WINDOW_SIZE_PITCH * [0], MOVAVG_WINDOW_SIZE_PITCH),
+    "roll": deque(MOVAVG_WINDOW_SIZE_ROLL * [0], MOVAVG_WINDOW_SIZE_ROLL)
+}
+
+published_messages = 0
+
+
+def on_publish_callback(client, userdata, mid):
+    global published_messages
+    published_messages += 1
+
+
+def on_message_callback_gps(client, userdata, message):
+    gps = json.loads(message.payload)
+    buffer["lon"].append(gps["lon"] * MULTIPLIER_NDEGREE_TO_DEGREE)
+    buffer["lat"].append(gps["lat"] * MULTIPLIER_NDEGREE_TO_DEGREE)
+    buffer["sog"].append(gps["gSpeed"] * MULTIPLIER_MMS_TO_KNOTS)
+    buffer["cog"].append(gps["headMot"] * MULTIPLIER_UDEGREE_TO_DEGREE)
+
+
+def on_message_callback_imu(client, userdata, message):
+    imu = json.loads(message.payload)
+    buffer["heading"].append(360 - imu["euler"]["z"])
+    buffer["pitch"].append(-imu["euler"]["y"])
+    buffer["roll"].append(imu["euler"]["x"])
+
+
+mqtt = Client(MQTT_CLIENT_ID)
+mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
+mqtt.message_callback_add("sensor/gps0", on_message_callback_gps)
+mqtt.message_callback_add("sensor/imu0", on_message_callback_imu)
+mqtt.on_publish = on_publish_callback
+mqtt.connect("localhost")
+mqtt.subscribe("sensor/gps0")
+mqtt.subscribe("sensor/imu0")
+mqtt.loop_start()
+
+tl = Timeloop()
+
+formatter = logging.Formatter("[%(levelname)s] %(message)s")
+logging.getLogger("timeloop").handlers[0].setFormatter(formatter)
+logger = logging.getLogger(MQTT_CLIENT_ID)
+logger.setLevel(logging.INFO)
+handler = logging.StreamHandler()
+handler.setFormatter(formatter)
+logger.addHandler(handler)
+
+
+@tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
+def mqtt_job():
+    sys.stdout = open(os.devnull, 'w')
+    payload = {
+        "lon": sum(buffer["lon"]) / MOVAVG_WINDOW_SIZE_LON,
+        "lat": sum(buffer["lat"]) / MOVAVG_WINDOW_SIZE_LAT,
+        "sog": sum(buffer["sog"]) / MOVAVG_WINDOW_SIZE_SOG,
+        "cog": sum(buffer["cog"]) / MOVAVG_WINDOW_SIZE_COG,
+        "heading": sum(buffer["heading"]) / MOVAVG_WINDOW_SIZE_HEADING,
+        "pitch": sum(buffer["pitch"]) / MOVAVG_WINDOW_SIZE_PITCH,
+        "roll": sum(buffer["roll"]) / MOVAVG_WINDOW_SIZE_ROLL
+    }
+    payload["drift"] = payload["cog"] - payload["heading"]
+    if payload["drift"] > 180: payload["drift"] -= 360
+    if payload["drift"] < -180: payload["drift"] += 360
+    mqtt.publish("boat", json.dumps(payload))
+    sys.stdout = sys.__stdout__
+
+
+@tl.job(interval=timedelta(milliseconds=LOG_JOB_INTERVAL_MS))
+def log_job():
+    logger.info(f"Published messages: {published_messages}")
+
+
+tl.start(block=True)
