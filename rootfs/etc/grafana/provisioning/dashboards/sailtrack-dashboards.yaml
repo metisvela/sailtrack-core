@@ -3,5 +3,5 @@ apiVersion: 1
 providers:
   - name: "SailTrack"
     options:
-      path: /boot/sailtrack/dashboards
+      path: /usr/share/sailtrack/dashboards
       foldersFromFilesStructure: true

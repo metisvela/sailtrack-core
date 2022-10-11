@@ -17,12 +17,12 @@ G_CONFIG_INJECT "+ telegraf" "+ telegraf" /boot/dietpi/.dietpi-services_include_
 G_CONFIG_INJECT "+ sailtrack-status" "+ sailtrack-status" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-timesync" "+ sailtrack-timesync" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-tileserver" "+ sailtrack-tileserver" /boot/dietpi/.dietpi-services_include_exclude
-G_CONFIG_INJECT "+ sailtrack-filter" "+ sailtrack-filter" /boot/dietpi/.dietpi-services_include_exclude
+G_CONFIG_INJECT "+ sailtrack-processor" "+ sailtrack-processor" /boot/dietpi/.dietpi-services_include_exclude
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled telegraf
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-status
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-timesync
 G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-tileserver
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-filter
+G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-processor
 
 # Configure DietPi Banner
 G_EXEC touch /boot/dietpi/.dietpi-banner
@@ -51,7 +51,7 @@ G_EXEC curl --retry 10 --retry-delay 5 --retry-connrefused -s -X PUT -H "Content
 G_EXEC grafana-cli --pluginUrl=https://github.com/alexandrainst/alexandra-trackmap-panel/archive/master.zip plugins install alexandra-trackmap-panel
 G_CONFIG_INJECT ";allow_loading_unsigned_plugins =" "allow_loading_unsigned_plugins = alexandra-trackmap-panel" /etc/grafana/grafana.ini
 G_CONFIG_INJECT ";disable_sanitize_html =" "disable_sanitize_html = true" /etc/grafana/grafana.ini
-G_CONFIG_INJECT ";default_home_dashboard_path =" "default_home_dashboard_path = /boot/sailtrack/dashboards/sailtrack-home.json" /etc/grafana/grafana.ini
+G_CONFIG_INJECT ";default_home_dashboard_path =" "default_home_dashboard_path = /usr/share/sailtrack/dashboards/sailtrack-home.json" /etc/grafana/grafana.ini
 
 # Reboot after first boot is completed
 (while [ -f "/root/AUTO_CustomScript.sh" ]; do sleep 1; done; /usr/sbin/reboot) > /dev/null 2>&1 &

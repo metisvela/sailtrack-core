@@ -3,7 +3,7 @@ Description=SailTrack-TileServer
 
 [Service]
 Restart=on-failure
-WorkingDirectory=/boot/sailtrack/maps
+WorkingDirectory=/usr/share/sailtrack/maps
 ExecStart=/usr/bin/python3 -m http.server
 
 [Install]
