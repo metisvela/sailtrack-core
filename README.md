@@ -70,9 +70,10 @@ Follow the instructions below to get the SailTrack Core OS correctly installed. 
 
 Once the installation process has been successfully completed, you can use SailTrack Core by following the steps below.
 
-1. Power on the module by pressing the power push button. Once the WiFi network has been created, SailTrack Core will start collecting the measurements coming from the external modules.
-2. Connect to the `SailTrack-CoreNet` WiFi network with your pc, smartphone, tablet,....
+1. Power on the module by pressing the power push button. Once the WiFi network has been created, the other modules will automatically power on and SailTrack Core will start collecting the measurements coming from them. *Note: the automatic power on proecss might take a few minutes to complete, once a module is connected to the network the onboard LED will emit a steady light.*
+2. Connect to the `SailTrack-CoreNet` WiFi network with your pc, smartphone, tablet,... (password: `sailtracknet` or the one set in Step 4 of the installation).
 3. Visit http://192.168.42.1:3001 (user: `admin`, password: `sailtrack` or the one set in Step 4 of the installation) to connect to the Grafana dashboards to see real-time data and browse the database. To learn more about using Grafana, visit the [official guide](https://grafana.com/docs/grafana/latest/getting-started/getting-started/).
+4. To power off the system press and hold the power push button of the Core module until the power light starts blinking. Once the power light turns off, all the other modules will automatically turn off.
 
 ## Contributing
 
