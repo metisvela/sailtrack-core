@@ -15,6 +15,7 @@ SailTrack Core is the central component of the SailTrack system, it manages conn
 The SailTrack Core module is based on a battery powered Raspberry Pi SBC running a custom version of the Raspberry Pi OS, namely, [DietPi](https://dietpi.com). For a more detailed hardware description of the module, please refer to the [Bill Of Materials](hardware/BOM.csv). The 3D-printable enclosure con be found [here](hardware/STL).
 
 The module performs the following tasks:
+
 * It creates the SailTrack Network, the WiFi network needed by all the modules to communicate.
 * It acts as the [MQTT](https://mqtt.org) Broker, managing the exchange of MQTT messages between modules.
 * It runs the [InfluxDB](https://www.influxdata.com) database, gathering all the measurements coming from the sensors.
