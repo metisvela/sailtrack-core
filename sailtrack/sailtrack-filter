@@ -8,7 +8,6 @@ from time import sleep
 import os
 
 import numpy as np
-from numpy.linalg import inv
 from paho.mqtt.client import Client
 from timeloop import Timeloop
 # -------------------------- Configuration -------------------------- #
@@ -125,7 +124,7 @@ class KalmanFilter:
     def filter(self, measure):
         innovation = measure - self.H @ self.x
         delta = self.H @ self.P @ self.H.transpose() + self.R
-        k_gain = self.P @ self.H.transpose() @ inv(delta)
+        k_gain = np.linalg.solve(delta.transpose(), self.H@self.P.transpose()).transpose()
         self.x = self.x + k_gain @ innovation
         self.P = self.P - k_gain @ self.H @ self.P
 
@@ -134,7 +133,7 @@ class KalmanFilter:
         if input is not None:
             self.x += self.G @ control_input
         if self.S is not None:
-            self.x += self.S @ inv(self.R) @ measure
+            self.x += self.S @ np.linalg.solve(self.R, measure)
         self.P = self.F @ self.P @ self.F.transpose() + self.Q
 
 
@@ -240,6 +239,13 @@ def boat_kalman_job():
     measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
     # Measure Update
     kalman_boat.filter(measure)
+    logger.info("R matrix:")
+    logger.info(str(kalman_boat.R[0, 0]))
+    logger.info(str(kalman_boat.R[1, 1]))
+    logger.info(str(kalman_boat.R[2, 2]))
+    logger.info(str(kalman_boat.R[3, 3]))
+    logger.info(str(kalman_boat.R[4, 4]))
+    logger.info(str(kalman_boat.R[5, 5]))
 
 
 @tl.job(interval=timedelta(seconds=KALMAN_SAMPLE_TIME))
