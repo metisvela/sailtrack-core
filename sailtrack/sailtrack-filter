@@ -230,8 +230,8 @@ def boat_kalman_job():
         gps_data["velE"],
         -gps_data["velD"],
     ]
-    kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
-                                    gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
+    kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"]/1000 ** 2, gps_data["hAcc"]/1000 ** 2, gps_data["vAcc"]/1000 ** 2,
+                                    gps_data["sAcc"]/1000 ** 2, gps_data["sAcc"]/1000 ** 2, gps_data["sAcc"]/1000 ** 2])
     # Time Update
     if imu_data:
         acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
