@@ -230,12 +230,13 @@ def boat_kalman_job():
         gps_data["velE"],
         -gps_data["velD"],
     ]
-    kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"]/1000 ** 2, gps_data["hAcc"]/1000 ** 2, gps_data["vAcc"]/1000 ** 2,
-                                    gps_data["sAcc"]/1000 ** 2, gps_data["sAcc"]/1000 ** 2, gps_data["sAcc"]/1000 ** 2])
+    kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
+                                    gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
     # Time Update
     if imu_data:
         acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
         kalman_boat.predict(acc_input)
+        logger.info("acc input: " + str(acc_input))
     measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
     # Measure Update
     kalman_boat.filter(measure)
@@ -246,6 +247,7 @@ def boat_kalman_job():
     logger.info(str(kalman_boat.R[3, 3]))
     logger.info(str(kalman_boat.R[4, 4]))
     logger.info(str(kalman_boat.R[5, 5]))
+    logger.info("measure vector: "+str(measure))
 
 
 @tl.job(interval=timedelta(seconds=KALMAN_SAMPLE_TIME))
