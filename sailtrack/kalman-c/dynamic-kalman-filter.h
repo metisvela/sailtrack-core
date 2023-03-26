@@ -6,13 +6,10 @@
 
 // YOU NEED TO ADD YOUR EIGEN LIBRARY PATH YOURSELF
 #include <Eigen/Dense> // TODO - Make this library work in PlatformIO
+#include "matrix-types.h"
 
 namespace kf
 {
-
-    // Useful Aliases
-    using dMatrix = Eigen::Matrix<double, Eigen::Dynamic, Eigen::Dynamic>;
-    using dVector = Eigen::Matrix<double, Eigen::Dynamic, 1>;
 
     /** Generic implementation of a Kalman Filter using Eigen library.
      *  Matrices have dynamic size.

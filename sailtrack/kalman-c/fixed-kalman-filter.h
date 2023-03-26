@@ -18,18 +18,10 @@
 
 // YOU NEED TO ADD YOUR EIGEN LIBRARY PATH YOURSELF
 #include <Eigen/Dense> // TODO - Make this library work in PlatformIO
+#include "matrix-types.h"
 
 namespace kf
 {
-
-  // Useful Aliases
-  // TODO - Test float vs double on target platform
-  template <size_t ROW, size_t COL>
-  using fMatrix = Eigen::Matrix<double, ROW, COL>;
-
-  template <size_t ROW>
-  using fVector = Eigen::Matrix<double, ROW, 1>;
-
   /** Generic implementation of a Kalman Filter using Eigen library.
    *  Matrices have fixed size, determined by template parameters.
    * 
