@@ -4,8 +4,8 @@
 #ifndef DYNAMIC_KALMAN_FILTER_H
 #define DYNAMIC_KALMAN_FILTER_H
 
-// YOU NEED TO ADD YOUR EIGEN LIBRARY PATH YOURSELF
-#include <Eigen/Dense> // TODO - Make this library work in PlatformIO
+// YOU NEED TO  ADD YOUR EIGEN LIBRARY PATH YOURSELF
+#include </usr/include/eigen3/Eigen/Dense> // TODO - Make this library work in PlatformIO
 #include "matrix-types.h"
 
 namespace kf

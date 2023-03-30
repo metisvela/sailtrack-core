@@ -6,7 +6,7 @@
 #include "eigen-2-csv.h"
 #include "model.h"
 
-#define SENSOR_RAW_DATA "../test_data/sensor-data-2022-09-22_no_wind.csv"
+#define SENSOR_RAW_DATA "test_data/sensor-data-2022-09-22_no_wind.csv"
 
 extern int preprocess_simulation_data(std::string);
 
@@ -26,9 +26,9 @@ int main() {
     preprocess_simulation_data(SENSOR_RAW_DATA);
     
     //Load Data
-    dMatrix input_vectors = (loadData("../test_data/acc_input.csv")).transpose(); // transpose to get column vector for each entry
-    dMatrix measurement_vectors = (loadData("../test_data/measure.csv")).transpose(); // transpose to get column vector for each entry
-    dMatrix R_diags = (loadData("../test_data/kalman_boat_R.csv")).transpose(); // load diagonal values into column vectors
+    dMatrix input_vectors = (loadData("test_data/acc_input.csv")).transpose(); // transpose to get column vector for each entry
+    dMatrix measurement_vectors = (loadData("test_data/measure.csv")).transpose(); // transpose to get column vector for each entry
+    dMatrix R_diags = (loadData("test_data/kalman_boat_R.csv")).transpose(); // load diagonal values into column vectors
 
     // Vector that will save state estimates
     std::vector<dVector> state_estimates{};
@@ -45,7 +45,7 @@ int main() {
         }
 
         // Correct/Filter with state measurement if gps_data is given
-        if(!measurement_vectors.col(i).hasNaN()) {
+        if( (!measurement_vectors.col(i).hasNaN()) && (!R_diags.col(i).hasNaN()) ) {
             fFilter.update_noise_covariance(R_diags.col(i).asDiagonal());
             fFilter.correct(measurement_vectors.col(i));
         }
@@ -56,7 +56,7 @@ int main() {
     std::cout << fFilter.state_covariance_estimate() << std::endl;
 
     // Save state estimates - NOTE: state vectors saved as rows!
-    saveData("../test_data/estimates.csv", state_estimates);
+    saveData("test_data/estimates.csv", state_estimates);
 
     return 0;
 }
