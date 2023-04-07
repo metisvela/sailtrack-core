@@ -106,7 +106,7 @@ This is done by configuring Grafana in `Automation_Custom_Script.sh` and putting
 * [`sailtrack-x708_softsd`](sailtrack/sailtrack-x708_softsd) - Shell script that powers off the Raspberry Pi by sending an impulse to the [Geekworm X708](https://wiki.geekworm.com/X708) power HAT.
     This is required in order to perform a full software shutdown (software shutdown + battery power disconnected).
     Otherwise, you will only be able to perform a software shutdown.
-* [`sailtrack-x708_pwr`](sailtrack/sailtrack-x708_pwr) - Shell script that performs a software shutdown or reboot depending on an impulse coming from the [Geekworm X708](https://wiki.geekworm.com/X708) power HAT.
+* [`sailtrack-x708_pwr`](sailtrack/sailtrack-x708_pwr) - Shell script that performs a software shutdown or reboot depending on an impulse coming from the Geekworm X708 power HAT.
     This is needed to perform a full shutdown or reboot using a physical power button (the HAT sends the signal to this script, which performs the software shutdown/reboot, and then the HAT cuts the power).
 * [`sailtrack-timesync`](sailtrack/sailtrack-timesync) - Python script that continuously listens to the `sensor/gps0` topic for a message that contains the `epoch` field, setting the system time accordingly to the received epoch. 
     This is needed because the Raspberry Pi has no RTC clock built-in and will therefore lose track of the time and date as soon as it is shut down.
@@ -117,5 +117,6 @@ This is done by configuring Grafana in `Automation_Custom_Script.sh` and putting
     This is required for calculating metrics (such as drift) and filtering (such as speed, latitude, and longitude).
 
 All of the tasks listed above are run as [systemd](https://en.wikipedia.org/wiki/Systemd) services, which means that systemd will start them, log their output in the system journal, and restart them if they fail.
+If you are unfamiliar with systemd, check out one of the many [online tutorials](https://www.digitalocean.com/community/tutorials/systemd-essentials-working-with-services-units-and-the-journal).
 Every systemd service is defined by a unit file.
 The unit files of the custom scripts are all located in [`rootfs/etc/systemd/system`](rootfs/etc/systemd/system).
