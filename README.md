@@ -66,10 +66,7 @@ Once the installation process has been successfully completed, you can use SailT
 
 Contributors are welcome. If you are a student of the University of Padua, please apply for the Métis Vela Unipd team in the [website](http://metisvela.dii.unipd.it), specifying in the appliaction form that you are interested in contributing to the SailTrack Project. If you are not a student of the University of Padua, feel free to open Pull Requests and Issues to contribute to the project.
 
-If you are a contributor and you need to manually build the SailTrack Core OS image you can accomplish that by running the following command inside the root directory of the repository:
-```
-sudo .build/sailtrack-build DietPi_RPi-ARMv8-Bullseye SailTrack-Core_RPi-ARMv8-Bullseye
-```
+To learn more about contributing to this repository, check out the [Developer's Guide](DEVELOPER.md).
 
 ## License
 
