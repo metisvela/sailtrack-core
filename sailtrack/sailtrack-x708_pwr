@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# `sailtrack-x708_pwr` - Shell script that performs a software shutdown or 
+# reboot depending on an impulse coming from the Geekworm X708 power HAT. This 
+# is needed to perform a full shutdown or reboot using a physical power button 
+# (the HAT sends the signal to this script, which performs the software 
+# shutdown/reboot, and then the HAT cuts the power).
+
 SHUTDOWN_PIN=5
 BOOT_PIN=12
 REBOOT_PULSE_MIN_MS=200

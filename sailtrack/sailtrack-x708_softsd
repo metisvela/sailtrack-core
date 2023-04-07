@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# `sailtrack-x708_softsd` - Shell script that powers off the Raspberry Pi by 
+# sending an impulse to the Geekworm X708 power HAT. This is required in order 
+# to perform a full software shutdown (softwarecshutdown + battery power 
+# disconnected). Otherwise, you will only be able to perform a software 
+# shutdown.
+
 if [ "$EUID" -ne 0 ]
   then echo "poweroff: permission denied"
   exit

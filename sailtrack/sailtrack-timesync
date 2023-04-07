@@ -1,5 +1,13 @@
 #!/usr/bin/env python3
 
+# `sailtrack-timesync` - Python script that continuously listens to the 
+# `sensor/gps0` topic for a message that contains the `epoch` field, setting the
+# system time accordingly to the received epoch. This is needed because the 
+# Raspberry Pi has no RTC clock built-in and will therefore lose track of the 
+# time and date as soon as it is shut down. Instead, SailTrack Radio has a 
+# built-in RTC clock for the GPS, and therefore it sends, along with the GPS 
+# data, the current time and date.
+
 import json
 import logging
 import os

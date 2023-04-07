@@ -1,5 +1,9 @@
 #!/usr/bin/env python3
 
+# `sailtrack-status` - Python script that periodically sends the status data 
+# (e.g. battery voltage, CPU load, CPU temperature, etc.) of the module. Needed 
+# for logging purposes.
+
 import json
 import logging
 import os
