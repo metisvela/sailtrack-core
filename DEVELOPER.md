@@ -1,6 +1,6 @@
 # Developer's Guide
 This guide is intended to introduce new developers to all the aspects needed to contribute to SailTrack Core.
-If you haven't already, read the [documentation repository](https://github.com/metis-vela-unipd/sailtrack-docs) carefully, to familiarize yourself with the SailTrack project and its components.
+If you haven't already, read the [documentation repository](https://github.com/metis-vela-unipd/sailtrack-docs) carefully to familiarize yourself with the SailTrack project and its components.
 In this guide, we will assume that you're already familiar with the overall behavior of the system.
 
 ## Overview
