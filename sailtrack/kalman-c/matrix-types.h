@@ -1,7 +1,7 @@
 #ifndef MATRIX_TYPES_H
 #define MATRIX_TYPES_H
 
-#include </usr/include/eigen3/Eigen/Dense>
+#include <Eigen/Dense> // ADJUST YOUR EIGEN PATH
 
 // Useful Aliases
 namespace kf

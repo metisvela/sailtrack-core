@@ -1,9 +1,9 @@
-#ifndef MQTT_DATA_SIMULATION_H
-#define MQTT_DATA_SIMULATION_H
+#ifndef PREPROCESSING_LOGGED_H
+#define PREPROCESSING_LOGGED_H
 
 #include <iostream>
 
-int preprocess_simulation_data(std::string);
+int preprocess_logged_data(std::string);
 
 struct IMU{
     double euler_x;
@@ -12,13 +12,13 @@ struct IMU{
     double linearAccel_x;
     double linearAccel_y;
     double linearAccel_z;
-}imu_data;
+};
 
 struct ORIENTATION{
     double heading;
     double pitch;
     double roll;
-}orientation;
+};
 
 struct GPS{
     double vAcc;
@@ -38,6 +38,6 @@ struct GPS{
     double RL;
     double fixType;
     double epoch;
-}gps_data;
+};
 
-#endif  //MQTT_DATA_SIMULATION_H
+#endif  //PREPROCESSING_LOGGED_H

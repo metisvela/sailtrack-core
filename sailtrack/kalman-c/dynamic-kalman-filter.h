@@ -5,7 +5,7 @@
 #define DYNAMIC_KALMAN_FILTER_H
 
 // YOU NEED TO  ADD YOUR EIGEN LIBRARY PATH YOURSELF
-#include </usr/include/eigen3/Eigen/Dense> // TODO - Make this library work in PlatformIO
+#include <Eigen/Dense> // TODO - Make this library work in PlatformIO
 #include "matrix-types.h"
 
 namespace kf
@@ -44,11 +44,12 @@ namespace kf
         const dMatrix H_; // output/observation
         const dMatrix Q_; // state noise covariance
         dMatrix R_;       // measurment noise covariance
-        dMatrix S_;       // measure-to-state uncorrelation (?)
+        dMatrix S_;       // state noise/measure noise covariance
         dVector x_hat_;   // state estimate
-        dMatrix P_;       // state covariance estimate
+        dMatrix P_;       // error covariance estimate
     };
 
+    // Constructor definitions
     DynamicKalmanFilter::DynamicKalmanFilter(const dMatrix &F, const dMatrix &G, const dMatrix &H,
                                              const dMatrix &Q)
         : F_{F},
@@ -75,23 +76,24 @@ namespace kf
     {
     }
 
+    // Member definitions
     void DynamicKalmanFilter::predict()
     {
         x_hat_ = F_ * x_hat_;               // extrapolate state
-        P_ = F_ * P_ * F_.transpose() + Q_; // extrapolate state covariance
+        P_ = F_ * P_ * F_.transpose() + Q_; // extrapolate error covariance
     }
 
     void DynamicKalmanFilter::predict(const dVector &input_vector)
     {
         x_hat_ = F_ * x_hat_ + G_ * input_vector; // extrapolate state
-        P_ = F_ * P_ * F_.transpose() + Q_;       // extrapolate state covariance
+        P_ = F_ * P_ * F_.transpose() + Q_;       // extrapolate error covariance
     }
 
     void DynamicKalmanFilter::predict(const dVector &input_vector, const dVector &measurement_vector)
     {
         // NOTE - R is diagonal in our model, can be optimized.
         x_hat_ = F_ * x_hat_ + G_ * input_vector + S_ * R_.ldlt().solve(measurement_vector); // extrapolate state
-        P_ = F_ * P_ * F_.transpose() + Q_;                                                  // extrapolate state covariance
+        P_ = F_ * P_ * F_.transpose() + Q_;                                                  // extrapolate error covariance
     }
 
     void DynamicKalmanFilter::correct(const dVector &measurement_vector)
@@ -104,7 +106,7 @@ namespace kf
 
         // Update the state estimate
         x_hat_ += K * (measurement_vector - H_ * x_hat_); // Update state estimate using measurement
-        P_ -= K * H_ * P_;                                // Update covariance estimate using measurement
+        P_ -= K * H_ * P_;                                // Update error covariance estimate using measurement
     }
 
 }

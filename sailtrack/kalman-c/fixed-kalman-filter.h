@@ -17,7 +17,7 @@
 #define FIXED_KALMAN_FILTER_H
 
 // YOU NEED TO ADD YOUR EIGEN LIBRARY PATH YOURSELF
-#include </usr/include/eigen3/Eigen/Dense> // TODO - Make this library work in PlatformIO
+#include <Eigen/Dense> // TODO - Make this library work in PlatformIO
 #include "matrix-types.h"
 
 namespace kf
@@ -62,11 +62,12 @@ namespace kf
     const fMatrix<DIM_P, DIM_N> H_; // output/observation
     const fMatrix<DIM_N, DIM_N> Q_; // state noise covariance
     fMatrix<DIM_P, DIM_P> R_;       // measurment noise covariance
-    fMatrix<DIM_N, DIM_P> S_;       // measure-to-state uncorrelation (?)
+    fMatrix<DIM_N, DIM_P> S_;       // state noise/measure noise covariance
     fVector<DIM_N> x_hat_;          // state estimate
-    fMatrix<DIM_N, DIM_N> P_;       // state covariance estimate
+    fMatrix<DIM_N, DIM_N> P_;       // error covariance estimate
   };
 
+  // Constructor definitions
   template <size_t DIM_N, size_t DIM_M, size_t DIM_P>
   FixedKalmanFilter<DIM_N, DIM_M, DIM_P>::FixedKalmanFilter(const fMatrix<DIM_N, DIM_N> &F, const fMatrix<DIM_N, DIM_M> &G, const fMatrix<DIM_P, DIM_N> &H,
                                                             const fMatrix<DIM_N, DIM_N> &Q)
@@ -95,18 +96,19 @@ namespace kf
   {
   }
 
+  // Member definitions
   template <size_t DIM_N, size_t DIM_M, size_t DIM_P>
   void FixedKalmanFilter<DIM_N, DIM_M, DIM_P>::predict()
   {
     x_hat_ = F_ * x_hat_;               // extrapolate state
-    P_ = F_ * P_ * F_.transpose() + Q_; // extrapolate state covariance
+    P_ = F_ * P_ * F_.transpose() + Q_; // extrapolate error covariance
   }
 
   template <size_t DIM_N, size_t DIM_M, size_t DIM_P>
   void FixedKalmanFilter<DIM_N, DIM_M, DIM_P>::predict(const fVector<DIM_M> &input_vector)
   {
     x_hat_ = F_ * x_hat_ + G_ * input_vector; // extrapolate state
-    P_ = F_ * P_ * F_.transpose() + Q_;       // extrapolate state covariance
+    P_ = F_ * P_ * F_.transpose() + Q_;       // extrapolate error covariance
   }
 
   template <size_t DIM_N, size_t DIM_M, size_t DIM_P>
@@ -114,7 +116,7 @@ namespace kf
   {
     // NOTE - R is diagonal in our model, can be optimized.
     x_hat_ = F_ * x_hat_ + G_ * input_vector + S_ * R_.ldlt().solve(measurement_vector); // extrapolate state
-    P_ = F_ * P_ * F_.transpose() + Q_;                                                  // extrapolate state covariance
+    P_ = F_ * P_ * F_.transpose() + Q_;                                                  // extrapolate error covariance
   }
 
   template <size_t DIM_N, size_t DIM_M, size_t DIM_P>
@@ -128,7 +130,7 @@ namespace kf
 
     // Update the state estimate
     x_hat_ += K * (measurement_vector - H_ * x_hat_); // Update state estimate using measurement
-    P_ -= K * H_ * P_;                                // Update covariance estimate using measurement  //TODO - Check wether P stays p.s.d. over many function calls
+    P_ -= K * H_ * P_;                                // Update error covariance estimate using measurement  //TODO - Check wether P stays p.s.d. over many function calls
   }
 
 }

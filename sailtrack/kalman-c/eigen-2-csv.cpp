@@ -1,19 +1,15 @@
 #include "eigen-2-csv.h"
 
 //Function to load data from file
-Eigen::MatrixXd loadData(std::string fileToOpen)
+Eigen::MatrixXd csv2eigen(std::string fileToOpen)
 {
- 
     // Copy&Paste from https://aleksandarhaber.com/eigen-matrix-library-c-tutorial-saving-and-loading-data-in-from-a-csv-file/
      
     // the input is the file: "fileToOpen.csv":
     // a,b,c
     // d,e,f
-    // This function converts input file data into the Eigen matrix format
- 
- 
- 
-    // the matrix entries are stored in this variable row-wise. For example if we have the matrix:
+    // This function converts input file data into the Eigen matrix format 
+    // The matrix entries are stored in this variable row-wise. For example if we have the matrix:
     // M=[a b c 
     //    d e f]
     // the entries are stored as matrixEntries=[a,b,c,d,e,f], that is the variable "matrixEntries" is a row vector
@@ -51,7 +47,7 @@ Eigen::MatrixXd loadData(std::string fileToOpen)
 }
 
 // Save matrix in CSV format
-void saveData(std::string fileName, Eigen::MatrixXd  matrix)
+void eigen2csv(std::string fileName, Eigen::MatrixXd  matrix)
 {
     // Copy&Paste from https://aleksandarhaber.com/eigen-matrix-library-c-tutorial-saving-and-loading-data-in-from-a-csv-file/
 
@@ -66,8 +62,8 @@ void saveData(std::string fileName, Eigen::MatrixXd  matrix)
     }
 }
 
-// Save list (std::vector) of eigen vectors in row format
-void saveData(std::string fileName, std::vector<Eigen::VectorXd> data)
+// Save list (std::vector) of eigen vectors row-wise in CSV format
+void eigen2csv(std::string fileName, std::vector<Eigen::VectorXd> data)
 {
     const static Eigen::IOFormat CSVFormat(Eigen::FullPrecision, Eigen::DontAlignCols, ", ", "\n");
     

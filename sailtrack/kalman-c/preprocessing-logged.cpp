@@ -7,47 +7,50 @@
 #include <stdexcept>
 #include <limits>
 
-#include "mqtt-data-simulation.h"
-
-constexpr double EARTH_CIRCUMFERENCE_METERS{40075.0 * 1000.0};
-constexpr double MPS_TO_KNOTS_MULTIPLIER{1.94384};
+#include "preprocessing-logged.h"
 
 using namespace std;
 
-bool gps_available = true;
-bool imu_available = true;
-bool gps_ref_set = false;
-GPS gps_ref = {};
-double LAT_FACTOR = 1;
+// Constants
+constexpr double EARTH_CIRCUMFERENCE_METERS{40075.0 * 1000.0};
+constexpr double MPS_TO_KNOTS_MULTIPLIER{1.94384};
 
-vector<double> acc_input;     //  used as input for the
-vector<double> kalman_boat_R; //  print_data_csv function
-vector<double> measure_v;     //
+// Structures will hold current sensor data
+IMU imu_data{};
+ORIENTATION orientation{};
+GPS gps_data{}, gps_ref{};
 
-double nanValue = numeric_limits<double>::quiet_NaN();                                         //  default values printed in the
-vector<double> no_acc_input = {nanValue, nanValue, nanValue};                                  //  csv when data not available
-vector<double> no_R_no_measure = {nanValue, nanValue, nanValue, nanValue, nanValue, nanValue}; //
+constexpr double nanValue = numeric_limits<double>::quiet_NaN();                                         //  default values printed in the
+const vector<double> no_acc_input = {nanValue, nanValue, nanValue};                                  //  csv when data not available
+const vector<double> no_R_no_measure = {nanValue, nanValue, nanValue, nanValue, nanValue, nanValue}; //
 
 // helper functions
-double toRadians(double);
-void printdata(vector<vector<string>>);
-int print_data_csv(string, vector<double>);
+inline double toRadians(double value) { return value * M_PI / 180.0; }
+int vector2csv(string, vector<double>);
 
 // Function takes raw sensor csv-file,
 // creates a 3 csv-files with preprocessed acceleration, measurment and noise covariance data.
-int preprocess_simulation_data(string filename)
+int preprocess_logged_data(string filename)
 {
+    double LAT_FACTOR = 1;
+
+    bool gps_available = true; // Control flow flags, set to false by exception generated from stod() function.
+    bool imu_available = true;
+    bool gps_ref_set = false;
+
+    vector<double> acc_input;     // current preprocessed data line to be written to csv
+    vector<double> kalman_boat_R; //
+    vector<double> measure_v;     //
+
+    vector<vector<string>> data; // var to save raw data file
+    string line;
+
     remove("test_data/acc_input.csv");     // remove previous version of the output files
     remove("test_data/kalman_boat_R.csv"); //
     remove("test_data/measure.csv");       //
 
-    vector<vector<string>> data;
+    // Read raw data into data vector, if no data is available saves an empty string.
     ifstream file(filename);
-    string line;
-
-    // string trash;
-    // getline(file, trash); // Ingnore first row
-
     while (getline(file, line))
     {
         vector<string> row;
@@ -61,11 +64,13 @@ int preprocess_simulation_data(string filename)
     }
     file.close();
 
+    // Preprocess each row/time stamp
     for (int i = 1; i < data.size(); i++)
     {
+        // Try to read imu data
         try
         {
-            // "no wind" raw data
+            // "no wind" raw data mapping
             imu_data.euler_x = stod(data[i][3]);
             imu_data.euler_y = stod(data[i][4]);
             imu_data.euler_z = stod(data[i][5]);
@@ -73,27 +78,22 @@ int preprocess_simulation_data(string filename)
             imu_data.linearAccel_y = stod(data[i][14]);
             imu_data.linearAccel_z = stod(data[i][15]);
 
-            // other raw data
-            // imu_data.euler_x = stod(data[i][1]);
-            // imu_data.euler_y = stod(data[i][2]);
-            // imu_data.euler_z = stod(data[i][3]);
-            // imu_data.linearAccel_x = stod(data[i][4]);
-            // imu_data.linearAccel_y = stod(data[i][5]);
-            // imu_data.linearAccel_z = stod(data[i][6]);
-
             orientation.heading = 360 - imu_data.euler_z;
             orientation.pitch = -imu_data.euler_y;
             orientation.roll = imu_data.euler_x;
 
             imu_available = true;
         }
+        // No data (empty string) triggers stod invalid argument exception.
         catch (const invalid_argument &e)
         {
-            imu_available = false; // at leat one of imu metrics is not available
+            imu_available = false; // at least one of imu metrics is not available
         }
+
+        // Try to read gps data
         try
         {
-            //  "No wind" raw data
+            //  "no wind" raw data mapping
             gps_data.vAcc = stod(data[i][18]) * pow(10, -3);
             gps_data.hAcc = stod(data[i][8]) * pow(10, -3);
             gps_data.sAcc = stod(data[i][17]) * pow(10, -3);
@@ -109,35 +109,15 @@ int preprocess_simulation_data(string filename)
             gps_data.fixType = stod(data[i][6]);
             gps_data.epoch = stod(data[i][2]);
 
-            // other raw data
-            // gps_data.vAcc = stod(data[i][7]) * pow(10, -3);
-            // gps_data.hAcc = stod(data[i][8]) * pow(10, -3);
-            // gps_data.sAcc = stod(data[i][9]) * pow(10, -3);
-            // gps_data.headAcc = stod(data[i][10]);
-            // gps_data.lon = stod(data[i][11]) * pow(10, -7);
-            // gps_data.lat = stod(data[i][12]) * pow(10, -7);
-            // gps_data.hMSL = stod(data[i][13]) * pow(10, -3);
-            // gps_data.velN = stod(data[i][14]) * pow(10, -3);
-            // gps_data.velE = stod(data[i][15]) * pow(10, -3);
-            // gps_data.velD = stod(data[i][16]) * pow(10, -3);
-            // gps_data.gSpeed = stod(data[i][17]);
-            // gps_data.headMot = stod(data[i][18]);
-            // // gps_data.fixType = stod(data[i][5]);
-            // // gps_data.epoch = stod(data[i][1]);
-
             gps_available = true;
-
-            if (gps_ref_set == false) 
-            {
-                gps_ref = gps_data; // this was a reference not a copy!!!
-                gps_ref_set = true;
-            }
         }
+        // No data (empty string) triggers stod invalid argument exception.
         catch (const invalid_argument &e)
         {
-            gps_available = false; // at leat one of gps metrics is not available
+            gps_available = false; // at least one of gps metrics is not available
         }
 
+        // If available, prerocess imu data
         if (imu_available)
         {
 
@@ -155,8 +135,15 @@ int preprocess_simulation_data(string filename)
             }                                             // 1x3 vector
         }
 
+        // If available, preprocess gps data
         if (gps_available)
         {
+            // Set gps reference the first time data is available (done once)
+            if (!gps_ref_set)
+            {
+                gps_ref = gps_data;
+                gps_ref_set = true;
+            }
 
             LAT_FACTOR = cos(toRadians(gps_data.lat + gps_ref.lat) / 2);
 
@@ -165,14 +152,16 @@ int preprocess_simulation_data(string filename)
                                      (gps_data.hMSL - gps_ref.hMSL)};
 
             double gps_ned_velocity[3] = {gps_data.velN, gps_data.velE, -gps_data.velD};
-
+            
+            // Sensor accuracy readings used.
+            // Assume uncorrelated noise and that accuracy readings give 2 * std deviation interval. (0.95 confidence interval of gaussian)
             double local_R[6] = {pow(gps_data.hAcc, 2) * 0.25, pow(gps_data.hAcc, 2) * 0.25, pow(gps_data.vAcc, 2) * 0.25,
-                                       pow(gps_data.sAcc, 2) * 0.25, pow(gps_data.sAcc, 2) * 0.25, pow(gps_data.sAcc, 2) * 0.25};
+                                 pow(gps_data.sAcc, 2) * 0.25, pow(gps_data.sAcc, 2) * 0.25, pow(gps_data.sAcc, 2) * 0.25};
 
             for (int i = 0; i < 6; i++)
             {
-                kalman_boat_R.push_back(local_R[i]); // R matrix after processing. These six elements are the element
-            }                                              // on a 6x6 diagonal matrix
+                kalman_boat_R.push_back(local_R[i]); // R matrix after preprocessing. These six elements are the element
+            }                                        // on a 6x6 diagonal matrix
 
             double measure[6] = {gps_rel_pos[0], gps_rel_pos[1], gps_rel_pos[2], gps_ned_velocity[0], gps_ned_velocity[1], gps_ned_velocity[2]};
 
@@ -182,49 +171,34 @@ int preprocess_simulation_data(string filename)
             }                                    // 1x6 vector
         }
 
+        // Write preprocessed time stamp into seperate files
         if (imu_available)
-        {                                               // if *_available add the data to the csv,
-            print_data_csv("test_data/acc_input.csv", acc_input); // otherwhise add the default NaN vectors.
+        {                                                     // if *_available add the data to the csv,
+            vector2csv("test_data/acc_input.csv", acc_input); // otherwhise add the default NaN vectors.
             acc_input.clear();
         }
         else
-            print_data_csv("test_data/acc_input.csv", no_acc_input);
+            vector2csv("test_data/acc_input.csv", no_acc_input);
 
         if (gps_available)
         {
-            print_data_csv("test_data/kalman_boat_R.csv", kalman_boat_R);
-            print_data_csv("test_data/measure.csv", measure_v);
+            vector2csv("test_data/kalman_boat_R.csv", kalman_boat_R);
+            vector2csv("test_data/measure.csv", measure_v);
             kalman_boat_R.clear();
             measure_v.clear();
         }
         else
         {
-            print_data_csv("test_data/kalman_boat_R.csv", no_R_no_measure);
-            print_data_csv("test_data/measure.csv", no_R_no_measure);
+            vector2csv("test_data/kalman_boat_R.csv", no_R_no_measure);
+            vector2csv("test_data/measure.csv", no_R_no_measure);
         }
     }
 
     return 0;
 }
 
-void printdata(vector<vector<string>> data)
-{
-    for (int i = 0; i < data.size(); i++)
-    {
-        for (int j = 0; j < data[i].size(); j++)
-        {
-            cout << data[i][j] << " ";
-        }
-        cout << endl;
-    }
-}
 
-inline double toRadians(double value)
-{
-    return value * M_PI / 180.0;
-}
-
-int print_data_csv(string filename, vector<double> data)
+int vector2csv(string filename, vector<double> data)
 {
     ofstream outfile(filename, ios::app); // open "filename" csv file in append mode
     if (!outfile.is_open())
@@ -232,7 +206,7 @@ int print_data_csv(string filename, vector<double> data)
         cerr << "Error opening file!" << endl;
         return 1;
     }
-    for (int i = 0;  i < data.size()-1; i++)
+    for (int i = 0; i < data.size() - 1; i++)
     {
         outfile << data[i] << ",";
     }
