@@ -12,7 +12,7 @@ from paho.mqtt.client import Client
 from timeloop import Timeloop
 # -------------------------- Configuration -------------------------- #
 
-KALMAN_SAMPLE_TIME = 0.01
+KALMAN_SAMPLE_TIME = 0.2
 MQTT_PUBLISH_FREQ_HZ = 5
 
 MQTT_CLIENT_ID = "sailtrack-filter_boat"
