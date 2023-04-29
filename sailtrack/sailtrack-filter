@@ -42,12 +42,17 @@ world2body_mtx = np.matrix([[1, 0, 0],
 ned2neu_mtx = np.matrix([[1, 0, 0],
                          [0, 1, 0],
                          [0, 0, -1]])
-
+shroud_tension = 0
 
 def angle_wrap_180(angle):
     if angle > 180:
         angle -= 360
     return angle
+
+def on_message_callback_strain(client, username, message):
+    global shroud_tension
+    strain_data = json.loads(message.payload)
+    shroud_tension = strain_data["load"]
 
 
 def on_message_callback_gps(client, userdata, message):
@@ -209,10 +214,12 @@ mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
 mqtt.message_callback_add("sensor/gps0", on_message_callback_gps)
 mqtt.message_callback_add("sensor/imu0", on_message_callback_imu)
 mqtt.message_callback_add("sensor/wind0", on_message_callback_wind)
+mqtt.message_callback_add("sensor/strain0", on_message_callback_strain)
 mqtt.connect("localhost")
 mqtt.subscribe("sensor/gps0")
 mqtt.subscribe("sensor/imu0")
 mqtt.subscribe("sensor/wind0")
+mqtt.subscribe("sensor/strain0")
 mqtt.loop_start()
 
 tl = Timeloop()
@@ -236,31 +243,24 @@ def boat_kalman_job():
     if imu_data:
         acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
         kalman_boat.predict(acc_input)
-        logger.info("acc input: " + str(acc_input))
+        # logger.info("acc input: " + str(acc_input))
     measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
     # Measure Update
     kalman_boat.filter(measure)
-    logger.info("R matrix:")
-    logger.info(str(kalman_boat.R[0, 0]))
-    logger.info(str(kalman_boat.R[1, 1]))
-    logger.info(str(kalman_boat.R[2, 2]))
-    logger.info(str(kalman_boat.R[3, 3]))
-    logger.info(str(kalman_boat.R[4, 4]))
-    logger.info(str(kalman_boat.R[5, 5]))
-    logger.info("measure vector: "+str(measure))
+    # logger.info("R matrix:")
+    # logger.info(str(kalman_boat.R[0, 0]))
+    # logger.info(str(kalman_boat.R[1, 1]))
+    # logger.info(str(kalman_boat.R[2, 2]))
+    # logger.info(str(kalman_boat.R[3, 3]))
+    # logger.info(str(kalman_boat.R[4, 4]))
+    # logger.info(str(kalman_boat.R[5, 5]))
+    # logger.info("measure vector: "+str(measure))
 
-
-@tl.job(interval=timedelta(seconds=KALMAN_SAMPLE_TIME))
-def wind_kalman_job():
-    measure = np.array([wind_data.get("FL", 0),
-                        wind_data.get("FR", 0),
-                        wind_data.get("RL", 0)])
-    kalman_wind.filter(measure)
-    kalman_wind.predict()
 
 
 @tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
 def mqtt_job():
+    global strain_data
     pos_x = kalman_boat.x[0, 0]
     pos_y = kalman_boat.x[1, 0]
     pos_z = kalman_boat.x[2, 0]
@@ -287,6 +287,7 @@ def mqtt_job():
     twa = math.degrees(math.atan2(twy, tws))
     twd = np.mod(orientation["heading"] + twa, 360)
     twd = twd if twd > 0 else 360 - twd
+    #logger.info("Strain recived msg: " + shroud_tension)
     mqtt.publish("boat", json.dumps({
         "lon": lon,
         "lat": lat,
@@ -297,7 +298,8 @@ def mqtt_job():
         "heading": orientation["heading"],
         "pitch": angle_wrap_180(orientation["pitch"]),
         "roll": angle_wrap_180(orientation["roll"]),
-        "drift": drift
+        "drift": drift,
+        "shroud": shroud_tension
     }))
     # UNCOMMENT TO SEND WIND DATA
     """
