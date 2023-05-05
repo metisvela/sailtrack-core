@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/metis-vela-unipd/sailtrack/main/Assets/SailTrack%20Logo.svg" width="180">
+  <img src="https://raw.githubusercontent.com/metis-vela-unipd/sailtrack/main/assets/SailTrack%20Logo.svg" width="180">
 </p>
 
 <p align="center">
