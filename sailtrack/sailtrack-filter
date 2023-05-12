@@ -58,7 +58,6 @@ def on_message_callback_strain(client, username, message):
 def on_message_callback_gps(client, userdata, message):
     global gps_ref
     global gps_data
-    global gps_received
     global LAT_FACTOR
 
     gps_data = json.loads(message.payload)
@@ -74,17 +73,15 @@ def on_message_callback_gps(client, userdata, message):
     gps_data["hAcc"] *= 10 ** -3
     gps_data["vAcc"] *= 10 ** -3
     gps_data["sAcc"] *= 10 ** -3
-    gps_received = True
+
     if not gps_ref:
         gps_ref = gps_data
-        gps_received = False
 
     LAT_FACTOR = math.cos(math.radians(gps_data["lat"] + gps_ref["lat"]) / 2)
 
 
 def on_message_callback_imu(client, userdata, message):
     global imu_data
-    global imu_received
     global orientation
     global world2body_mtx
     imu_data = json.loads(message.payload)
@@ -101,13 +98,11 @@ def on_message_callback_imu(client, userdata, message):
         [0, 0, 1]
     ])
 
-    linear_accel_brf = np.array(list(imu_data.get("linearAccel", np.zeros((3, 1))).values())).reshape((3, 1))
-    linear_accel_wrf = world2body_mtx @ linear_accel_brf
+    linear_accel_wrf = world2body_mtx @ np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
 
-    imu_data["linearAccel"]["x"] = linear_accel_wrf[0].item()
-    imu_data["linearAccel"]["y"] = linear_accel_wrf[1].item()
-    imu_data["linearAccel"]["z"] = linear_accel_wrf[2].item()
-    imu_received = True
+    imu_data["linearAccel"]["x"] = linear_accel_wrf[0]
+    imu_data["linearAccel"]["y"] = linear_accel_wrf[1]
+    imu_data["linearAccel"]["z"] = linear_accel_wrf[2]
 
 
 def on_message_callback_wind(client, userdata, message):
@@ -242,27 +237,24 @@ def boat_kalman_job():
         gps_data["velE"],
         -gps_data["velD"],
     ]
-    if gps_received and imu_received:
-        measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
+    kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
+                                    gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
+    # Time Update
+    if imu_data:
         acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
         kalman_boat.predict(acc_input)
-        kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
-                                gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
-        kalman_boat.update(measure)
-        gps_received = False
-        imu_received = False
-
-    elif not gps_received and imu_received:
-        measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
-        acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
-        kalman_boat.predict(acc_input)
-        imu_received = False
-
-    elif gps_received and not imu_received:
-        kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
-                                gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
-        kalman_boat.update(measure)
-        gps_received = False
+        # logger.info("acc input: " + str(acc_input))
+    measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
+    # Measure Update
+    kalman_boat.filter(measure)
+    # logger.info("R matrix:")
+    # logger.info(str(kalman_boat.R[0, 0]))
+    # logger.info(str(kalman_boat.R[1, 1]))
+    # logger.info(str(kalman_boat.R[2, 2]))
+    # logger.info(str(kalman_boat.R[3, 3]))
+    # logger.info(str(kalman_boat.R[4, 4]))
+    # logger.info(str(kalman_boat.R[5, 5]))
+    # logger.info("measure vector: "+str(measure))
 
 
 
@@ -284,6 +276,8 @@ def mqtt_job():
         cog_180 = angle_wrap_180(cog)
         head_180 = angle_wrap_180(orientation["heading"])
         drift = abs(head_180 - cog_180)
+        if abs(head_180)+abs(cog_180)>180:
+            drift = 360 - drift
         if head_180 > cog_180:
             drift = -drift
     twx = kalman_wind.x[0] - boat_xy_speed[0]
