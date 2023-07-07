@@ -4,8 +4,6 @@
 #ifndef DYNAMIC_KALMAN_FILTER_H
 #define DYNAMIC_KALMAN_FILTER_H
 
-// YOU NEED TO  ADD YOUR EIGEN LIBRARY PATH YOURSELF
-#include <Eigen/Dense> // TODO - Make this library work in PlatformIO
 #include "matrix-types.h"
 
 namespace kf
@@ -32,7 +30,7 @@ namespace kf
 
         // Member access
         const dVector &state_estimate() const { return x_hat_; }
-        const dMatrix &state_covariance_estimate() const { return P_; }
+        const dMatrix &error_covariance_estimate() const { return P_; }
 
         // Member update
         void update_noise_covariance(const dMatrix &R_new) { R_ = R_new; }

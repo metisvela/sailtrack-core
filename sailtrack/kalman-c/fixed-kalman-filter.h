@@ -1,8 +1,6 @@
 /* TODO
  *        
- *       - Do some Testing 
- * 
- *	     - Check numerical stability of implementation (P staying p.s.d. for prolonged amount of time)
+ *  	    - Check numerical stability of implementation (P staying p.s.d. for prolonged amount of time)
  *	      -- if unstable, change algorithm to more stable one (e.g. square root formulation)
  *
  *       Possible optimization routes:
@@ -11,13 +9,13 @@
  *         - study the Eigen library documentation at https://eigen.tuxfamily.org/dox/
  *             -- e. g. passing matrices as arguments: https://eigen.tuxfamily.org/dox/TopicFunctionTakingEigenTypes.html
  *                 --- pass arguments with Eigen::Ref?? (no temporaries but losing alignment information)
+ * 
+ *    Bottom Line: Seems to work just fine
  */
 
 #ifndef FIXED_KALMAN_FILTER_H
 #define FIXED_KALMAN_FILTER_H
 
-// YOU NEED TO ADD YOUR EIGEN LIBRARY PATH YOURSELF
-#include <Eigen/Dense> // TODO - Make this library work in PlatformIO
 #include "matrix-types.h"
 
 namespace kf
@@ -50,7 +48,7 @@ namespace kf
 
     // Member access
     const fVector<DIM_N> &state_estimate() const { return x_hat_; }
-    const fMatrix<DIM_N, DIM_N> &state_covariance_estimate() const { return P_; }
+    const fMatrix<DIM_N, DIM_N> &error_covariance_estimate() const { return P_; }
 
     // Member update
     void update_noise_covariance(const fMatrix<DIM_P, DIM_P> &R_new) { R_ = R_new; }

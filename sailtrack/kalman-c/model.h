@@ -3,20 +3,22 @@
 
 #include "matrix-types.h"
 
-// TODO Fix for the real model!
 namespace kf
 {
     // Preliminary values
-    constexpr float sample_time{15}; // IMPORTANT: HAS TO MATCH THE REAL SAMPLE TIME OF THE DATA
-    constexpr float w_std{0.1};  // State noise is just a guess atm
-    constexpr float r_std{0.05}; // not used, just for testing
+
+    /* IMPORTANT: SAMPLE TIME HAS TO MATCH THE REAL SAMPLE TIME OF THE KALMAN FILTER */
+    constexpr double kalman_sample_time_s{15};       // Sample time for the logged test data 
+    //constexpr double kalman_sample_time_s{0.2};         // Sample time for live data
+    constexpr double w_std{0.1};                        // State noise is just a guess atm
+    constexpr double r_std{0.05};                       // not used, just for testing
 
     // Define (fixed) Model
     const fMatrix<6, 6> fF 
     {   
-        {1, 0, 0, sample_time, 0, 0},
-        {0, 1, 0, 0, sample_time, 0},
-        {0, 0, 1, 0, 0, sample_time},
+        {1, 0, 0, kalman_sample_time_s, 0, 0},
+        {0, 1, 0, 0, kalman_sample_time_s, 0},
+        {0, 0, 1, 0, 0, kalman_sample_time_s},
         {0, 0, 0, 1, 0, 0},
         {0, 0, 0, 0, 1, 0},
         {0, 0, 0, 0, 0, 1}
@@ -25,12 +27,12 @@ namespace kf
 
     const fMatrix<6, 3> fG
     {
-        {(sample_time*sample_time)/2, 0, 0},
-        {0, (sample_time*sample_time)/2, 0},
-        {0, 0, (sample_time*sample_time)/2},
-        {sample_time, 0, 0},
-        {0, sample_time, 0},
-        {0, 0, sample_time}
+        {(kalman_sample_time_s*kalman_sample_time_s)/2, 0, 0},
+        {0, (kalman_sample_time_s*kalman_sample_time_s)/2, 0},
+        {0, 0, (kalman_sample_time_s*kalman_sample_time_s)/2},
+        {kalman_sample_time_s, 0, 0},
+        {0, kalman_sample_time_s, 0},
+        {0, 0, kalman_sample_time_s}
     };
     
     const fMatrix<6, 6> fH{ fMatrix<6,6>::Identity() };
@@ -48,6 +50,10 @@ namespace kf
         {0, 0, 0, 0, 0.1, 0},
         {0, 0, 0, 0, 0, 0.1}
     };
+
+    // Values to initialize
+    const kf::fMatrix<6,6> fP_init{kf::fQ};
+    const kf::fVector<6> fx_init{kf::fVector<6>::Zero()};
 } // namespace kf
 
 #endif // MODEL_H

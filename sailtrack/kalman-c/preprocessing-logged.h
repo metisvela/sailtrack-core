@@ -5,6 +5,7 @@
 
 int preprocess_logged_data(std::string);
 
+// TODO: seperate data structures from this header
 struct IMU{
     double euler_x;
     double euler_y;

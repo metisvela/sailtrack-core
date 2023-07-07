@@ -57,7 +57,7 @@ int main() {
         state_estimates.push_back(fFilter.state_estimate());
     }
 
-    std::cout << fFilter.state_covariance_estimate() << std::endl;
+    std::cout << fFilter.error_covariance_estimate() << std::endl;
 
     // Save state estimates (row-wise)
     eigen2csv("test_data/estimates.csv", state_estimates);
