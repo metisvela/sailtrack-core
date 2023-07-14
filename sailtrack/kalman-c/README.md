@@ -21,5 +21,11 @@ To compile & run:
 - to compile: g++ main.cpp -lmosquitto
 - run the executable: (on linux) ./a.out
 
-Bugs:
-- not connecting to mqtt broker
+To test with sensor simulation script on your machine:
+
+- for all configurations, use "localhost" as address
+- create mqtt broker in docker container: docker run -it -p 1883:1883 eclipse-mosquitto mosquitto -c /mosquitto-no-auth.conf
+- run sensor simulation script from boat-simulations repo: p
+ython3 sensor\_simulation\_mqtt/mqtt-sensor-simulation.py
+- run compiled c++ executable from before
+- check connection using MQTTExplorer

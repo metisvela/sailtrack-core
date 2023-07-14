@@ -28,6 +28,7 @@ constexpr double earth_circumference_meters = 40075 * 1000;
 /** Config **/
 constexpr auto mqtt_client_id = "sailtrack-filter_boat";
 constexpr auto mqtt_pw = "sailtrack";
+constexpr auto host = "localhost"; // 192.168.42.1
 
 constexpr int kalman_sample_time_ms = (int) (kf::kalman_sample_time_s * 1000);
 constexpr int mqtt_publish_interval_ms = 200;
@@ -145,7 +146,7 @@ void imu_preprocess(IMU &imu, ORIENTATION &orient)
 void on_connect_callback(struct mosquitto *mosq, void *obj, int rc)
 {
     std::cout << "In connect callback..." << std::endl;
-    if (rc == 0)    // check for connection
+    if (rc == MOSQ_ERR_SUCCESS)    // check for connection
     {
         std::cout << "Subscribing to topics..." << std::endl;
         mosquitto_subscribe(mosq, NULL, "sensor/gps0", 0);
@@ -423,20 +424,23 @@ int main(void)
     mosquitto_lib_init();
 
     mosq = mosquitto_new(mqtt_client_id, false, NULL);
-    mosquitto_threaded_set(mosq, true);
     mosquitto_username_pw_set(mosq, "mosquitto", mqtt_pw);
 
     mosquitto_connect_callback_set(mosq, on_connect_callback); // subscribe to relevant topics
     mosquitto_message_callback_set(mosq, on_message_callback); // handles messages for all topics
 
-    rc = mosquitto_connect(mosq, "192.168.42.1", 1883, 10); // 192.168.42.1
-    if (rc != 0)
+    rc = mosquitto_connect(mosq, host, 1883, 60);
+    if (rc != MOSQ_ERR_SUCCESS)
     {
         // printf("Client could not connect to broker! Error Code: %d\n", rc);
         std::cout << "Error on mosquitto_connect call" << std::endl;
         mosquitto_destroy(mosq);
         return -1;
     }
+
+    /* Alternative to connect callback */
+    //mosquitto_subscribe(mosq, NULL, "sensor/gps0", 0);
+    //mosquitto_subscribe(mosq, NULL, "sensor/imu0", 0);
 
     std::cout << "Before mosquitto loop start..." << std::endl;
     mosquitto_loop_start(mosq); // starts a seperate mqtt networking thread

@@ -8,9 +8,9 @@ namespace kf
     // Preliminary values
 
     /* IMPORTANT: SAMPLE TIME HAS TO MATCH THE REAL SAMPLE TIME OF THE KALMAN FILTER */
-    constexpr double kalman_sample_time_s{15};       // Sample time for the logged test data 
-    //constexpr double kalman_sample_time_s{0.2};         // Sample time for live data
-    constexpr double w_std{0.1};                        // State noise is just a guess atm
+    //constexpr double kalman_sample_time_s{15};        // Sample time for the logged test data 
+    constexpr double kalman_sample_time_s{0.2};         // Sample time for live data
+    constexpr double w_std{0.1};                        // State noise (just a guess atm)
     constexpr double r_std{0.05};                       // not used, just for testing
 
     // Define (fixed) Model
