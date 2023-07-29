@@ -84,7 +84,6 @@ def on_message_callback_gps(client, userdata, message):
 
     LAT_FACTOR = math.cos(math.radians(gps_data["lat"] + gps_ref["lat"]) / 2)
 
-
 def on_message_callback_imu(client, userdata, message):
     global imu_data
     global imu_received
@@ -109,6 +108,7 @@ def on_message_callback_imu(client, userdata, message):
     imu_data["linearAccel"]["x"] = linear_accel_wrf[0]
     imu_data["linearAccel"]["y"] = linear_accel_wrf[1]
     imu_data["linearAccel"]["z"] = linear_accel_wrf[2]
+    imu_received = True
 
 
 def on_message_callback_wind(client, userdata, message):
@@ -247,7 +247,6 @@ def boat_kalman_job():
     ]
     kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
                                     gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
-    logger.info("Logic state of recieved flags: Imu:"+str(imu_received)+"gps:"+str(gps_received))
     # Time update
     if gps_received and imu_received:
         measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
@@ -255,7 +254,7 @@ def boat_kalman_job():
         kalman_boat.predict(acc_input)
         kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
                                 gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
-        kalman_boat.update(measure)
+        kalman_boat.filter(measure)
         gps_received = False
         imu_received = False
 
@@ -263,12 +262,14 @@ def boat_kalman_job():
         measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
         acc_input = np.array(list(imu_data["linearAccel"].values())).reshape(3, 1)
         kalman_boat.predict(acc_input)
+        imu_recived = False
         
     elif gps_received and not imu_received:
         measure = np.hstack((gps_rel_pos, gps_ned_velocity)).reshape(6, 1)
         kalman_boat.R = 0.25 * np.diag([gps_data["hAcc"] ** 2, gps_data["hAcc"] ** 2, gps_data["vAcc"] ** 2,
                                 gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2, gps_data["sAcc"] ** 2])
-        kalman_boat.update(measure)  
+        kalman_boat.filter(measure)
+        gps_received = False  
 
 
 @tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
