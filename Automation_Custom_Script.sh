@@ -40,11 +40,11 @@ done
 G_EXEC /boot/dietpi/dietpi-services restart grafana-server
 GLOBAL_PASSWORD=$(openssl enc -d -a -md sha256 -aes-256-cbc -iter 10000 -salt -pass pass:'DietPiRocks!' -in /var/lib/dietpi/dietpi-software/.GLOBAL_PW.bin)
 SERVICE_ACCOUNT_ID=$(\
-  curl -X POST -H "Content-Type: application/json" -d '{"name":"telegraf", "role": "Admin"}' http://admin:$GLOBAL_PASSWORD@localhost:3001/api/serviceaccounts | \
+  curl --retry 10 --retry-delay 5 --retry-connrefused -s -X POST -H "Content-Type: application/json" -d '{"name":"telegraf", "role": "Admin"}' "http://admin:$GLOBAL_PASSWORD@localhost:3001/api/serviceaccounts" | \
   python3 -c "import sys, json; print(json.load(sys.stdin)['id'])" \
 )
 GRAFANA_API_KEY=$(\
-  curl -X POST -H "Content-Type: application/json" -d '{"name":"telegraf-token"}' http://admin:$GLOBAL_PASSWORD@localhost:3001/api/serviceaccounts/$SERVICE_ACCOUNT_ID/tokens | \
+  curl --retry 10 --retry-delay 5 --retry-connrefused -s -X POST -H "Content-Type: application/json" -d '{"name":"telegraf-token"}' "http://admin:$GLOBAL_PASSWORD@localhost:3001/api/serviceaccounts/$SERVICE_ACCOUNT_ID/tokens" | \
   python3 -c "import sys, json; print(json.load(sys.stdin)['key'])" \
 )
 GCI_PASSWORD=1 G_CONFIG_INJECT "SAILTRACK_GLOBAL_PASSWORD=" "SAILTRACK_GLOBAL_PASSWORD=$GLOBAL_PASSWORD" /etc/default/sailtrack
