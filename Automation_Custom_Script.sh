@@ -18,11 +18,16 @@ G_CONFIG_INJECT "+ sailtrack-status" "+ sailtrack-status" /boot/dietpi/.dietpi-s
 G_CONFIG_INJECT "+ sailtrack-timesync" "+ sailtrack-timesync" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-tileserver" "+ sailtrack-tileserver" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-processor" "+ sailtrack-processor" /boot/dietpi/.dietpi-services_include_exclude
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled telegraf
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-status
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-timesync
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-tileserver
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-processor
+G_EXEC /boot/dietpi/dietpi-services enable telegraf
+G_EXEC /boot/dietpi/dietpi-services start telegraf
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-status
+G_EXEC /boot/dietpi/dietpi-services start sailtrack-status
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-timesync
+G_EXEC /boot/dietpi/dietpi-services start sailtrack-timesync
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-tileserver
+G_EXEC /boot/dietpi/dietpi-services start sailtrack-tileserver
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-processor
+G_EXEC /boot/dietpi/dietpi-services start sailtrack-processor
 
 # Configure DietPi Banner
 G_EXEC touch /boot/dietpi/.dietpi-banner
