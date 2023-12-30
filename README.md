@@ -1,16 +1,16 @@
 <p align="center">
-  <img src="https://raw.githubusercontent.com/metis-vela-unipd/sailtrack/main/assets/SailTrack%20Logo.svg" width="180">
+  <img src="https://raw.githubusercontent.com/metisvela/sailtrack/main/assets/sailtrack-logo.svg" width="180">
 </p>
 
 <p align="center">
-  <img src="https://img.shields.io/github/license/metis-vela-unipd/sailtrack-core" />
-  <img src="https://img.shields.io/github/v/release/metis-vela-unipd/sailtrack-core" />
-  <img src="https://img.shields.io/github/actions/workflow/status/metis-vela-unipd/sailtrack-core/publish.yml" />
+  <img src="https://img.shields.io/github/license/metisvela/sailtrack-core" />
+  <img src="https://img.shields.io/github/v/release/metisvela/sailtrack-core" />
+  <img src="https://img.shields.io/github/actions/workflow/status/metisvela/sailtrack-core/publish.yml" />
 </p>
 
 # SailTrack Core
 
-SailTrack Core is the central component of the SailTrack system, it manages connections and gathers data. To learn more about the SailTrack project, please visit the [project repository](https://github.com/metis-vela-unipd/sailtrack).
+SailTrack Core is the central component of the SailTrack system, it manages connections and gathers data. To learn more about the SailTrack project, please visit the [project repository](https://github.com/metisvela/sailtrack).
 
 The SailTrack Core module is based on a battery powered Raspberry Pi SBC running a custom version of the Raspberry Pi OS, namely, [DietPi](https://dietpi.com). For a more detailed hardware description of the module, please refer to the [Bill Of Materials](hardware/BOM.csv). The 3D-printable enclosure con be found [here](hardware/STL).
 
@@ -31,7 +31,7 @@ The module performs the following tasks:
 
 ## Installation
 
-Follow the instructions below to get the SailTrack Core OS correctly installed. If you encounter any problem, please [open an issue](https://github.com/metis-vela-unipd/sailtrack-core/issues/new).
+Follow the instructions below to get the SailTrack Core OS correctly installed. If you encounter any problem, please [open an issue](https://github.com/metisvela/sailtrack-core/issues/new).
 
 1. [Download](https://github.com/metis-vela-unipd/sailtrack-core/releases/latest/download/SailTrack-Core_RPi-ARMv8-Bullseye.7z) and extract the latest SailTrack Core OS image.
 2. Insert the Raspberry Pi microSD card into the computer.
@@ -64,10 +64,10 @@ Once the installation process has been successfully completed, you can use SailT
 
 ## Contributing
 
-Contributors are welcome. If you are a student of the University of Padua, please apply for the Métis Vela Unipd team in the [website](http://metisvela.dii.unipd.it), specifying in the appliaction form that you are interested in contributing to the SailTrack Project. If you are not a student of the University of Padua, feel free to open Pull Requests and Issues to contribute to the project.
+Contributors are welcome. If you are a student of the University of Padova, please apply for the Metis Sailing Team in the [website](http://metisvela.dii.unipd.it), specifying in the appliaction form that you are interested in contributing to the SailTrack Project. If you are not a student of the University of Padova, feel free to open Pull Requests and Issues to contribute to the project.
 
 To learn more about contributing to this repository, check out the [Developer's Guide](DEVELOPER.md).
 
 ## License
 
-Copyright © 2023, [Métis Vela Unipd](https://github.com/metis-vela-unipd). SailTrack Core is available under the [GPL-3.0 license](https://www.gnu.org/licenses/gpl-3.0.en.html). See the LICENSE file for more info. 
+Copyright © 2023, [Metis Sailing Team](https://github.com/metisvela). SailTrack Core is available under the [GPL-3.0 license](https://www.gnu.org/licenses/gpl-3.0.en.html). See the LICENSE file for more info. 
