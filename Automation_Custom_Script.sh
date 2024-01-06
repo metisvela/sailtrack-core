@@ -18,11 +18,10 @@ G_CONFIG_INJECT "+ sailtrack-status" "+ sailtrack-status" /boot/dietpi/.dietpi-s
 G_CONFIG_INJECT "+ sailtrack-timesync" "+ sailtrack-timesync" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-tileserver" "+ sailtrack-tileserver" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-processor" "+ sailtrack-processor" /boot/dietpi/.dietpi-services_include_exclude
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled telegraf
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-status
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-timesync
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-tileserver
-G_EXEC /boot/dietpi/dietpi-services dietpi_controlled sailtrack-processor
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-status
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-timesync
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-tileserver
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-processor
 
 # Configure DietPi Banner
 G_EXEC touch /boot/dietpi/.dietpi-banner
@@ -34,8 +33,12 @@ done
 # Configure passwords and keys
 G_EXEC /boot/dietpi/dietpi-services restart grafana-server
 GLOBAL_PASSWORD=$(openssl enc -d -a -md sha256 -aes-256-cbc -iter 10000 -salt -pass pass:'DietPiRocks!' -in /var/lib/dietpi/dietpi-software/.GLOBAL_PW.bin)
+GRAFNA_SERVICE_ACCOUNT_ID=$(\
+  curl --retry 10 --retry-delay 5 --retry-connrefused -s -X POST -H "Content-Type: application/json" -d '{"name":"SailTrack", "role": "Admin"}' "http://admin:$GLOBAL_PASSWORD@localhost:3001/api/serviceaccounts" | \
+  python3 -c "import sys, json; print(json.load(sys.stdin)['id'])" \
+)
 GRAFANA_API_KEY=$(\
-  curl --retry 10 --retry-delay 5 --retry-connrefused -s -X POST -H "Content-Type: application/json" -d '{"name":"sailtrack", "role": "Admin"}' "http://admin:$GLOBAL_PASSWORD@localhost:3001/api/auth/keys" | \
+  curl --retry 10 --retry-delay 5 --retry-connrefused -s -X POST -H "Content-Type: application/json" -d '{"name":"Telegraf"}' "http://admin:$GLOBAL_PASSWORD@localhost:3001/api/serviceaccounts/$GRAFANA_SERVICE_ACCOUNT_ID/tokens" | \
   python3 -c "import sys, json; print(json.load(sys.stdin)['key'])" \
 )
 GCI_PASSWORD=1 G_CONFIG_INJECT "SAILTRACK_GLOBAL_PASSWORD=" "SAILTRACK_GLOBAL_PASSWORD=$GLOBAL_PASSWORD" /etc/default/sailtrack
