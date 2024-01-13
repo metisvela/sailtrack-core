@@ -1,31 +1,19 @@
 #!/bin/bash
 
-# Check arguments
-if [ -z "$1" ]; then
-  echo "sailtrack-build: missing argument: DIETPI_IMG_NAME"
-  echo "Usage: sailtrack-build DIETPI_IMG_NAME OUTPUT_IMG_NAME"
-  exit 1
-fi
-
-if [ -z "$2" ]; then
-  echo "sailtrack-build: missing argument: OUTPUT_IMG_NAME"
-  echo "Usage: sailtrack-build DIETPI_IMG_NAME OUTPUT_IMG_NAME"
-  exit 1
-fi
-
 # Set variables
-DIETPI_IMG_NAME=$1
-OUTPUT_IMG_NAME=$2
+debian_release_name="Bookworm"
+dietpi_image_name="DietPi_RPi-ARMv8-$debian_release_name"
+sailtrack_image_name="SailTrack-Core_RPi-ARMv8-$debian_release_name"
 
 # Download and extract image
-wget -N "https://dietpi.com/downloads/images/$DIETPI_IMG_NAME.7z" -P /tmp/sailtrack-build || exit 1
-7z e -aoa -o"/tmp/sailtrack-build/$DIETPI_IMG_NAME" "/tmp/sailtrack-build/$DIETPI_IMG_NAME.7z"
+wget -N "https://dietpi.com/downloads/images/$dietpi_image_name.7z" -P /tmp/sailtrack-build || exit 1
+7z e -aoa -o"/tmp/sailtrack-build/$dietpi_image_name" "/tmp/sailtrack-build/$dietpi_image_name.7z"
 
 # Mount image
-FP_LOOP=$(losetup --show -f -P "/tmp/sailtrack-build/$DIETPI_IMG_NAME/$DIETPI_IMG_NAME.img")
-mkdir /tmp/sailtrack-build/mnt
-mount "${FP_LOOP}p2" /tmp/sailtrack-build/mnt
-mount "${FP_LOOP}p1" /tmp/sailtrack-build/mnt/boot
+fp_loop=$(losetup --show -fP "/tmp/sailtrack-build/$dietpi_image_name/$dietpi_image_name.img")
+mkdir -p /tmp/sailtrack-build/mnt
+mount "${fp_loop}p2" /tmp/sailtrack-build/mnt
+mount "${fp_loop}p1" /tmp/sailtrack-build/mnt/boot
 
 # Copy files
 cp -v LICENSE /tmp/sailtrack-build/mnt/boot/sailtrack-LICENSE.txt
@@ -37,25 +25,25 @@ cp -vrT rootfs /tmp/sailtrack-build/mnt
 
 # Unmount image
 umount -R /tmp/sailtrack-build/mnt
-losetup -d "$FP_LOOP"
+losetup -d "$fp_loop"
 
 # Rename image
-mv "/tmp/sailtrack-build/$DIETPI_IMG_NAME/$DIETPI_IMG_NAME.img" "/tmp/sailtrack-build/$DIETPI_IMG_NAME/$OUTPUT_IMG_NAME.img"
+mv "/tmp/sailtrack-build/$dietpi_image_name/$dietpi_image_name.img" "/tmp/sailtrack-build/$dietpi_image_name/$sailtrack_image_name.img"
 
 # Update hashes
 echo -n "Generating hashes..."
-cat << _EOF_ > "/tmp/sailtrack-build/$DIETPI_IMG_NAME/hash.txt"
-FILE:   $OUTPUT_IMG_NAME.img
+cat << EOF > "/tmp/sailtrack-build/$dietpi_image_name/hash.txt"
+FILE:   $sailtrack_image_name.img
 DATE:   $(date -u)
-MD5:    $(md5sum "/tmp/sailtrack-build/$DIETPI_IMG_NAME/$OUTPUT_IMG_NAME.img" | mawk '{print $1}')
-SHA1:   $(sha1sum "/tmp/sailtrack-build/$DIETPI_IMG_NAME/$OUTPUT_IMG_NAME.img" | mawk '{print $1}')
-SHA256: $(sha256sum "/tmp/sailtrack-build/$DIETPI_IMG_NAME/$OUTPUT_IMG_NAME.img" | mawk '{print $1}')
-_EOF_
+MD5:    $(md5sum "/tmp/sailtrack-build/$dietpi_image_name/$sailtrack_image_name.img" | mawk '{print $1}')
+SHA1:   $(sha1sum "/tmp/sailtrack-build/$dietpi_image_name/$sailtrack_image_name.img" | mawk '{print $1}')
+SHA256: $(sha256sum "/tmp/sailtrack-build/$dietpi_image_name/$sailtrack_image_name.img" | mawk '{print $1}')
+EOF
 echo "done"
 
 # Update README
-cp -v README.md "/tmp/sailtrack-build/$DIETPI_IMG_NAME"
+cp -v README.md "/tmp/sailtrack-build/$dietpi_image_name"
 
 # Create archive
 (( $(free -m | mawk '/Mem:/{print $2}') < 1750 && $(nproc) > 2 )) && limit_threads='-mmt2'
-7z a -m0=lzma2 -mx=9 $limit_threads "$OUTPUT_IMG_NAME.7z" "/tmp/sailtrack-build/$DIETPI_IMG_NAME/*"
+7z a -m0=lzma2 -mx=9 $limit_threads "$sailtrack_image_name.7z" "/tmp/sailtrack-build/$dietpi_image_name/*"

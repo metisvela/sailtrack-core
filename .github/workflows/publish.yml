@@ -8,18 +8,15 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
-    env:
-      DIETPI_IMG_NAME: DietPi_RPi-ARMv8-Bullseye
-      OUTPUT_IMG_NAME: SailTrack-Core_RPi-ARMv8-Bullseye
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Run SailTrack-Build
-        run: sudo ./.build/sailtrack-build ${{ env.DIETPI_IMG_NAME }} ${{ env.OUTPUT_IMG_NAME }}
+        run: sudo ./.build/sailtrack-build
 
       - name: Publish release
         uses: softprops/action-gh-release@v1
         with:
-          files: ${{ env.OUTPUT_IMG_NAME }}.7z
+          files: SailTrack-Core_RPi-ARMv8-Bookworm.7z
           generate_release_notes: true
