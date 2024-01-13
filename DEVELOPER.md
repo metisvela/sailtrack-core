@@ -52,13 +52,8 @@ Once this first job has been completed, the GitHub Action proceeds to publish a 
 
 The built image will have the files in the `/boot` folder easily accessible for in-field modifications by plugging the SD card into a PC, and the files copied from the `rootfs` folder will automatically be placed in the required locations.
 
-> **Note**
-> 
-> The SailTrack OS image can be built locally by manually running the `sailtrack-build` script.
-> ```
-> sudo .build/sailtrack-build DietPi_RPi-ARMv8-Bullseye SailTrack-Core_RPi-ARMv8-Bullseye
-> ```
-> This is particularly useful during development, when the GitHub Action cannot be run.
+> [!NOTE]
+> The SailTrack OS image can be built by manually running the [Build Image](https://github.com/metisvela/sailtrack-core/actions/workflows/build.yml) GitHub Action and downloading the produced artifact.
 
 Once the OS image is flashed and running on the Raspberry Pi, the first-run setup will take place.
 The first-run setup uses Dietpi-Automation, which is configured in the [`dietpi.txt`](https://github.com/metis-vela-unipd/sailtrack-core/blob/main/dietpi.txt) and [`Automation_Custom_Script.sh`](https://github.com/metis-vela-unipd/sailtrack-core/blob/main/Automation_Custom_Script.sh) files.
