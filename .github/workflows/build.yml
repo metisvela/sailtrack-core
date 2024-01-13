@@ -12,3 +12,10 @@ jobs:
 
       - name: Run SailTrack-Build
         run: sudo ./.build/sailtrack-build
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: SailTrack-Core_RPi-ARMv8-Bookworm.7z
+          path: SailTrack-Core_RPi-ARMv8-Bookworm.7z
+          compression-level: 0
