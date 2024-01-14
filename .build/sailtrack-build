@@ -1,11 +1,12 @@
 #!/bin/bash
 
-# Set variables
+# `sailtrack-build` - Script that builds the SailTrack OS image starting from a DietPi image.
+
 debian_release_name="Bookworm"
 dietpi_image_name="DietPi_RPi-ARMv8-$debian_release_name"
 sailtrack_image_name="SailTrack-Core_RPi-ARMv8-$debian_release_name"
 
-# Download and extract image
+# Download and extract DietPi image
 wget -N "https://dietpi.com/downloads/images/$dietpi_image_name.7z" -P /tmp/sailtrack-build || exit 1
 7z e -aoa -o"/tmp/sailtrack-build/$dietpi_image_name" "/tmp/sailtrack-build/$dietpi_image_name.7z"
 
@@ -15,7 +16,7 @@ mkdir -p /tmp/sailtrack-build/mnt
 mount "${fp_loop}p2" /tmp/sailtrack-build/mnt
 mount "${fp_loop}p1" /tmp/sailtrack-build/mnt/boot
 
-# Copy files
+# Copy SailTrack files
 cp -v LICENSE /tmp/sailtrack-build/mnt/boot/sailtrack-LICENSE.txt
 cp -v README.md /tmp/sailtrack-build/mnt/boot/sailtrack-README.md
 cp -v dietpi.txt /tmp/sailtrack-build/mnt/boot/dietpi.txt
@@ -27,7 +28,7 @@ cp -vrT rootfs /tmp/sailtrack-build/mnt
 umount -R /tmp/sailtrack-build/mnt
 losetup -d "$fp_loop"
 
-# Rename image
+# Rename DietPi image to SailTrack image
 mv "/tmp/sailtrack-build/$dietpi_image_name/$dietpi_image_name.img" "/tmp/sailtrack-build/$dietpi_image_name/$sailtrack_image_name.img"
 
 # Update hashes

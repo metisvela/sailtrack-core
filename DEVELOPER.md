@@ -6,7 +6,7 @@ In this guide, we will assume that you're already familiar with the overall beha
 ## Overview
 SailTrack Core is based on [DietPi](https://dietpi.com), a modified version of [Raspberry Pi OS](https://www.raspberrypi.com/software/), which is itself a modified version of [Debian](https://www.debian.org).
 When the OS boots up, the following tasks are performed continuously until shutdown:
-* Serving the WiFi access point (i.e. the "SailTrack-CoreNet" WiFi network)
+* Serving the Wi-Fi access point (i.e. the "SailTrack-CoreNet" WiFi network)
 * Running the MQTT broker (i.e. [Mosquitto](https://mosquitto.org))
 * Running the database (i.e. [InfluxDB](https://www.influxdata.com))
 * Running the metrics collector (i.e. [Telegraf](https://www.influxdata.com/time-series-platform/telegraf/), which takes the metrics coming from the sensors via MQTT, sends them to Grafana for live visualization, and sends them to InfluxDB for storing)
@@ -60,7 +60,7 @@ The first-run setup uses Dietpi-Automation, which is configured in the [`dietpi.
 
 The `dietpi.txt` file contains all the settings for DietPi (such as the networking configuration, the time zone, etc.) and the automation configuration, such as the software to install and how to configure it.
 Since DietPi-Automation's built-in features aren't enough to fully configure the OS, a bash script is needed, namely `Automation_Custom_Script.sh`.
-This script runs after the DietPi configuration, and it finishes the steps needed to setup SailTrack Core (e.g. it installs the missing packages, it sets up authentication tokens, etc.).
+This script runs after the DietPi configuration, and it finishes the steps needed to set up SailTrack Core (e.g. it installs the missing packages, it sets up authentication tokens, etc.).
 Once the script ends, the Raspberry Pi is rebooted, and SailTrack Core is then successfully deployed.
 
 

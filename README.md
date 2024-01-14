@@ -16,7 +16,7 @@ The SailTrack Core module is based on a battery powered Raspberry Pi SBC running
 
 The module performs the following tasks:
 
-* It creates the SailTrack Network, the WiFi network needed by all the modules to communicate.
+* It creates the SailTrack Network, the Wi-Fi network needed by all the modules to communicate.
 * It acts as the [MQTT](https://mqtt.org) Broker, managing the exchange of MQTT messages between modules.
 * It runs the [InfluxDB](https://www.influxdata.com) database, gathering all the measurements coming from the sensors.
 * It runs the [Grafana](https://grafana.com) server, for the visualization of real-time and logged metrics.
@@ -33,7 +33,7 @@ The module performs the following tasks:
 
 Follow the instructions below to get the SailTrack Core OS correctly installed. If you encounter any problem, please [open an issue](https://github.com/metisvela/sailtrack-core/issues/new).
 
-1. [Download](https://github.com/metis-vela-unipd/sailtrack-core/releases/latest/download/SailTrack-Core_RPi-ARMv8-Bullseye.7z) and extract the latest SailTrack Core OS image.
+1. [Download](https://github.com/metisvela/sailtrack-core/releases/latest/download/SailTrack-Core_RPi-ARMv8-Bullseye.7z) and extract the latest SailTrack Core OS image.
 2. Insert the Raspberry Pi microSD card into the computer.
 3. Flash the downloaded `.img` file into the SD card using a flashing tool such as [balenaEtcher](https://www.balena.io/etcher/).
 4. **(OPTIONAL)** Change the passwords from the default ones by modifying the `AUTO_SETUP_GLOBAL_PASSWORD` and the `SOFTWARE_WIFI_HOTSPOT_KEY` in the `dietpi.txt` file located inside the SD card.

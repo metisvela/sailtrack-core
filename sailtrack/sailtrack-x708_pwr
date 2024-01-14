@@ -1,36 +1,38 @@
 #!/bin/bash
 
-# `sailtrack-x708_pwr` - Shell script that performs a software shutdown or 
-# reboot depending on an impulse coming from the Geekworm X708 power HAT. This 
-# is needed to perform a full shutdown or reboot using a physical power button 
-# (the HAT sends the signal to this script, which performs the software 
-# shutdown/reboot, and then the HAT cuts the power).
+# `sailtrack-x708_pwr` - Shell script that performs a software shutdown or reboot depending on an impulse coming from
+# the Geekworm X708 power HAT. This is needed to perform a full shutdown or reboot using a physical power button (the
+# HAT sends the signal to this script, which performs the software shutdown/reboot, and then the HAT cuts the power).
 
-SHUTDOWN_PIN=5
-BOOT_PIN=12
-REBOOT_PULSE_MIN_MS=200
-REBOOT_PULSE_MAX_MS=600
+shutdown_pin=5
+boot_pin=12
+reboot_pulse_min_ms=200
+reboot_pulse_max_ms=600
 
-echo $SHUTDOWN_PIN > /sys/class/gpio/export
-echo "in" > /sys/class/gpio/gpio$SHUTDOWN_PIN/direction
-echo $BOOT_PIN > /sys/class/gpio/export
-echo "out" > /sys/class/gpio/gpio$BOOT_PIN/direction
-echo "1" > /sys/class/gpio/gpio$BOOT_PIN/value
+# Set pin directions (input/output) and default values
+echo $shutdown_pin > /sys/class/gpio/export
+echo "in" > /sys/class/gpio/gpio$shutdown_pin/direction
+echo $boot_pin > /sys/class/gpio/export
+echo "out" > /sys/class/gpio/gpio$boot_pin/direction
+echo "1" > /sys/class/gpio/gpio$boot_pin/value
 
 while : ; do
-  signal=$(</sys/class/gpio/gpio$SHUTDOWN_PIN/value)
+  signal=$(</sys/class/gpio/gpio$shutdown_pin/value)
+  # While the button is not pressed, do nothing
   if [ "$signal" = 0 ]; then /bin/sleep 0.2
   else
     start=$(date +%s%N | cut -b1-13)
     while [ "$signal" = 1 ]; do
       /bin/sleep 0.02
-      if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $REBOOT_PULSE_MAX_MS ]; then
+      # If the button is pressed for more than `$reboot_pulse_max_ms`, power off
+      if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $reboot_pulse_max_ms ]; then
         sudo /usr/sbin/poweroff
         exit
       fi
-      signal=$(</sys/class/gpio/gpio$SHUTDOWN_PIN/value)
+      signal=$(</sys/class/gpio/gpio$shutdown_pin/value)
     done
-    if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $REBOOT_PULSE_MIN_MS ]; then
+    # If the button is pressed for more than `$reboot_pulse_min_ms`, reboot
+    if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $reboot_pulse_min_ms ]; then
       sudo /usr/sbin/reboot
       exit
     fi

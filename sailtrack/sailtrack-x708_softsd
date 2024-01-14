@@ -1,22 +1,22 @@
 #!/bin/bash
 
-# `sailtrack-x708_softsd` - Shell script that powers off the Raspberry Pi by 
-# sending an impulse to the Geekworm X708 power HAT. This is required in order 
-# to perform a full software shutdown (softwarecshutdown + battery power 
-# disconnected). Otherwise, you will only be able to perform a software 
-# shutdown.
+# `sailtrack-x708_softsd` - Shell script that powers off the Raspberry Pi by sending an impulse to the Geekworm X708
+# power HAT. This is required in order to perform a full software shutdown (software shutdown + battery power
+# disconnect). Otherwise, you will only be able to perform a software shutdown.
 
-if [ "$EUID" -ne 0 ]
-  then echo "poweroff: permission denied"
-  exit
-fi
+# Load DietPi functions (G_* functions)
+. /boot/dietpi/func/dietpi-globals
+# Check if user has root privileges (needed for writing to GPIOs)
+G_CHECK_ROOT_USER 1
 
-BUTTON_PIN=13
-SLEEP_TIME_SEC=4
+button_pin=13
+sleep_time_s=4
 
-echo $BUTTON_PIN > /sys/class/gpio/export
-echo "out" > /sys/class/gpio/gpio$BUTTON_PIN/direction
+# Set pin directions (input/output)
+echo $button_pin > /sys/class/gpio/export
+echo "out" > /sys/class/gpio/gpio$button_pin/direction
 
-echo "1" > /sys/class/gpio/gpio$BUTTON_PIN/value
-/bin/sleep $SLEEP_TIME_SEC
-echo "0" > /sys/class/gpio/gpio$BUTTON_PIN/value
+# Send the shutdown impulse
+echo "1" > /sys/class/gpio/gpio$button_pin/value
+/bin/sleep $sleep_time_s
+echo "0" > /sys/class/gpio/gpio$button_pin/value
