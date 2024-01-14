@@ -49,7 +49,7 @@ Follow the instructions below to get the SailTrack Core OS correctly installed. 
    2. Dismiss the `DietPi first run setup is currently running on another screen` message by hitting <kbd>Ctrl</kbd> + <kbd>C</kbd>.
    3. Check the logs coming from the installation progress with the following command:
       ```
-      tail -f /var/tmp/dietpi/logs/dietpi-firstrun-setup.log
+      tail -f /var/tmp/dietpi/logs/*.log
       ```
 9. Wait until the `SailTrack-CoreNet` Wi-Fi network is visible, meaning that the installation process has been successfully completed.
 
