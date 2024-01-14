@@ -51,20 +51,20 @@ Follow the instructions below to get the SailTrack Core OS correctly installed. 
       ```
       tail -f /var/tmp/dietpi/logs/dietpi-firstrun-setup.log
       ```
-9. Wait until the `SailTrack-CoreNet` WiFi network is visible, meaning that the installation process has been successfully completed.
+9. Wait until the `SailTrack-CoreNet` Wi-Fi network is visible, meaning that the installation process has been successfully completed.
 
 ## Usage
 
 Once the installation process has been successfully completed, you can use SailTrack Core by following the steps below.
 
-1. Power on the module by pressing the power push button. Once the WiFi network has been created, the other modules will automatically power on and SailTrack Core will start collecting the measurements coming from them. *Note: the automatic power on proecss might take a few minutes to complete, once a module is connected to the network the onboard LED will emit a steady light.*
-2. Connect to the `SailTrack-CoreNet` WiFi network with your pc, smartphone, tablet,... (password: `sailtracknet` or the one set in Step 4 of the installation).
+1. Power on the module by pressing the power push button. Once the Wi-Fi network has been created, the other modules will automatically power on and SailTrack Core will start collecting the measurements coming from them. *Note: the automatic power on process might take a few minutes to complete, once a module is connected to the network the onboard LED will emit a steady light.*
+2. Connect to the `SailTrack-CoreNet` Wi-Fi network with your pc, smartphone, tablet,... (password: `sailtracknet` or the one set in Step 4 of the installation).
 3. Visit http://192.168.42.1:3001 (user: `admin`, password: `sailtrack` or the one set in Step 4 of the installation) to connect to the Grafana dashboards to see real-time data and browse the database. To learn more about using Grafana, visit the [official guide](https://grafana.com/docs/grafana/latest/getting-started/getting-started/).
 4. To power off the system press and hold the power push button of the Core module until the power light starts blinking. Once the power light turns off, all the other modules will automatically turn off.
 
 ## Contributing
 
-Contributors are welcome. If you are a student of the University of Padova, please apply for the Metis Sailing Team in the [website](http://metisvela.dii.unipd.it), specifying in the appliaction form that you are interested in contributing to the SailTrack Project. If you are not a student of the University of Padova, feel free to open Pull Requests and Issues to contribute to the project.
+Contributors are welcome. If you are a student of the University of Padova, please apply for the Metis Sailing Team in the [website](http://metisvela.dii.unipd.it), specifying in the application form that you are interested in contributing to the SailTrack Project. If you are not a student of the University of Padova, feel free to open Pull Requests and Issues to contribute to the project.
 
 To learn more about contributing to this repository, check out the [Developer's Guide](DEVELOPER.md).
 
