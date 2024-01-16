@@ -61,7 +61,7 @@ G_CONFIG_INJECT "omit_hostname =" "  omit_hostname = true" /etc/telegraf/telegra
 # Create the "SailTrack" organization (required by Grafana)
 G_EXEC curl --retry 10 --retry-delay 5 --retry-connrefused -s -X PUT -H "Content-Type: application/json" -d '{"name":"SailTrack"}' "http://admin:$global_password@localhost:3001/api/org"
 # Install the third-party custom track map panel
-G_EXEC grafana-cli --pluginUrl=https://github.com/alexandrainst/alexandra-trackmap-panel/archive/master.zip plugins install alexandra-trackmap-panel
+G_EXEC /usr/share/grafana/bin/grafana cli --pluginUrl=https://github.com/alexandrainst/alexandra-trackmap-panel/archive/master.zip plugins install alexandra-trackmap-panel
 # Allow the third-party plugin
 G_CONFIG_INJECT ";allow_loading_unsigned_plugins =" "allow_loading_unsigned_plugins = alexandra-trackmap-panel" /etc/grafana/grafana.ini
 # Enable the insertion of SVG files in Grafana panels (needed by the SailTrack logo in the home dashboard)
