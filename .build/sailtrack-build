@@ -7,8 +7,8 @@ dietpi_image_name="DietPi_RPi-ARMv8-$debian_release_name"
 sailtrack_image_name="SailTrack-Core_RPi-ARMv8-$debian_release_name"
 
 # Download and extract DietPi image
-wget -N "https://dietpi.com/downloads/images/$dietpi_image_name.7z" -P /tmp/sailtrack-build || exit 1
-7z e -aoa -o"/tmp/sailtrack-build/$dietpi_image_name" "/tmp/sailtrack-build/$dietpi_image_name.7z"
+wget -N "https://dietpi.com/downloads/images/$dietpi_image_name.img.xz" -P /tmp/sailtrack-build || exit 1
+7z e -aoa -o"/tmp/sailtrack-build/$dietpi_image_name" "/tmp/sailtrack-build/$dietpi_image_name.img.xz"
 
 # Mount image
 fp_loop=$(losetup --show -fP "/tmp/sailtrack-build/$dietpi_image_name/$dietpi_image_name.img")
