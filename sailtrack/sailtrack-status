@@ -11,7 +11,7 @@ import sys
 from datetime import timedelta
 
 from gpiozero import DigitalInputDevice, CPUTemperature, LoadAverage, DiskUsage
-from paho.mqtt.client import Client
+from paho.mqtt.client import Client, CallbackAPIVersion
 from smbus2 import SMBus
 from timeloop import Timeloop
 
@@ -54,7 +54,7 @@ def get_battery_capacity():
     return regval / 256
 
 
-mqtt = Client(MQTT_CLIENT_ID)
+mqtt = Client(CallbackAPIVersion.VERSION1, MQTT_CLIENT_ID)
 mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
 mqtt.on_publish = on_publish_callback
 mqtt.connect("localhost")

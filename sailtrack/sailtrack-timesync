@@ -12,7 +12,7 @@ import os
 import time
 from datetime import timedelta
 
-from paho.mqtt.client import Client
+from paho.mqtt.client import Client, CallbackAPIVersion
 from timeloop import Timeloop
 
 # -------------------------- Configuration -------------------------- #
@@ -44,7 +44,7 @@ def on_message_callback(client, userdata, message):
             time_syncs += 1
 
 
-mqtt = Client(MQTT_CLIENT_ID)
+mqtt = Client(CallbackAPIVersion.VERSION1, MQTT_CLIENT_ID)
 mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
 mqtt.on_message = on_message_callback
 mqtt.connect("localhost")

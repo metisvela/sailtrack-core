@@ -10,7 +10,7 @@ import sys
 from collections import deque
 from datetime import timedelta
 
-from paho.mqtt.client import Client
+from paho.mqtt.client import Client, CallbackAPIVersion
 from timeloop import Timeloop
 
 # -------------------------- Configuration -------------------------- #
@@ -70,7 +70,7 @@ def on_message_callback_imu(client, userdata, message):
     buffer["roll"].append(imu["euler"]["x"])
 
 
-mqtt = Client(MQTT_CLIENT_ID)
+mqtt = Client(CallbackAPIVersion.VERSION1, MQTT_CLIENT_ID)
 mqtt.username_pw_set("mosquitto", os.environ["SAILTRACK_GLOBAL_PASSWORD"])
 mqtt.message_callback_add("sensor/gps0", on_message_callback_gps)
 mqtt.message_callback_add("sensor/imu0", on_message_callback_imu)
