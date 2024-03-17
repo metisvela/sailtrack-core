@@ -115,3 +115,47 @@ All of the tasks listed above are run as [systemd](https://en.wikipedia.org/wiki
 If you are unfamiliar with systemd, check out one of the many [online tutorials](https://www.digitalocean.com/community/tutorials/systemd-essentials-working-with-services-units-and-the-journal).
 Every systemd service is defined by a unit file.
 The unit files of the custom scripts are all located in [`rootfs/etc/systemd/system`](rootfs/etc/systemd/system).
+
+## Data Management
+
+### Backing up Data
+
+To back up the InfluxDB database, and therefore all the data present on the system, execute the following commands:
+
+```bash
+influxd backup -portable /tmp/sailtrack_core_db_backu
+tar -czf /tmp/sailtrack_core_db_backup.tar.gz /tmp/sailtrack_core_db_backup
+```
+
+Now download and keep the /tmp/sailtrack_core_db_backup.tar.gz file containing the backup.
+
+### Restoring Backup
+
+When restoring the backup on a new SailTrack Core instance, follow these steps:
+
+1. Download the backup file `sailtrack_core_db_backup.tar.gz` and place it in the `/tmp` directory.
+
+2. Execute the following commands to extract the backup and import it in influx:
+
+```bash
+tar -xzf /tmp/sailtrack_core_db_backup.tar.gz
+influxd restore -portable -db sailtrack-data -newdb sailtrack-data-tmp /tmp/sailtrack_core_db_backup
+```
+
+3. Run the InfluxDB CLI by typing `influx` in the terminal and then execute the following commands within the CLI:
+
+```bash
+use sailtrack-data-tmp
+SELECT * INTO "sailtrack-data".autogen.:MEASUREMENT FROM "sailtrack-data-tmp".autogen./.*/ GROUP BY *
+DROP DATABASE "sailtrack-data-tmp"
+```
+These commands switch to the temporary database, copy data to the original database, and then drop the temporary database.
+
+4. Remove the unused files:
+
+```bash
+rm /tmp/saitrack_core_db_backup.tar.gz
+rm -r /tmp/sailtrack_core_db_backup
+```
+
+Your data is now accessible from the new core.
