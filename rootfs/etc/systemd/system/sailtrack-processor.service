@@ -1,5 +1,6 @@
 [Unit]
 Description=SailTrack-Processor
+After=mosquitto.service
 
 [Service]
 EnvironmentFile=-/etc/default/sailtrack
