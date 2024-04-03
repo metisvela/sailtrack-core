@@ -1,5 +1,6 @@
 [Unit]
 Description=SailTrack-TimeSync
+After=mosquitto.service
 
 [Service]
 EnvironmentFile=-/etc/default/sailtrack
