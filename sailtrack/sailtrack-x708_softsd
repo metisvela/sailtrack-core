@@ -1,22 +1,30 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
 # `sailtrack-x708_softsd` - Shell script that powers off the Raspberry Pi by sending an impulse to the Geekworm X708
 # power HAT. This is required in order to perform a full software shutdown (software shutdown + battery power
 # disconnect). Otherwise, you will only be able to perform a software shutdown.
 
-# Load DietPi functions (G_* functions)
-. /boot/dietpi/func/dietpi-globals
-# Check if user has root privileges (needed for writing to GPIOs)
-G_CHECK_ROOT_USER 1
+import os
+import time
 
-button_pin=13
-sleep_time_s=4
+button_pin = 13
+sleep_time_s = 4
 
-# Set pin directions (input/output)
-echo $button_pin > /sys/class/gpio/export
-echo "out" > /sys/class/gpio/gpio$button_pin/direction
+# Export GPIO pin and set direction
+def setup_gpio(pin, direction):
+    with open(f"/sys/class/gpio/export", "w") as export_file:
+        export_file.write(str(pin))
+    with open(f"/sys/class/gpio/gpio{pin}/direction", "w") as direction_file:
+        direction_file.write(direction)
+
+def set_gpio_value(pin, value):
+    with open(f"/sys/class/gpio/gpio{pin}/value", "w") as value_file:
+        value_file.write(value)
+
+# Setup GPIO pin
+setup_gpio(button_pin, "out")
 
 # Send the shutdown impulse
-echo "1" > /sys/class/gpio/gpio$button_pin/value
-/bin/sleep $sleep_time_s
-echo "0" > /sys/class/gpio/gpio$button_pin/value
+set_gpio_value(button_pin, "1")
+time.sleep(sleep_time_s)
+set_gpio_value(button_pin, "0")
