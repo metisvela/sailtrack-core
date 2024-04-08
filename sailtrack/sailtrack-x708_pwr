@@ -1,40 +1,46 @@
-#!/bin/bash
+#!/usr/bin/env python3
 
 # `sailtrack-x708_pwr` - Shell script that performs a software shutdown or reboot depending on an impulse coming from
 # the Geekworm X708 power HAT. This is needed to perform a full shutdown or reboot using a physical power button (the
 # HAT sends the signal to this script, which performs the software shutdown/reboot, and then the HAT cuts the power).
 
-shutdown_pin=5
-boot_pin=12
-reboot_pulse_min_ms=200
-reboot_pulse_max_ms=600
+import os
+import time
 
-# Set pin directions (input/output) and default values
-echo $shutdown_pin > /sys/class/gpio/export
-echo "in" > /sys/class/gpio/gpio$shutdown_pin/direction
-echo $boot_pin > /sys/class/gpio/export
-echo "out" > /sys/class/gpio/gpio$boot_pin/direction
-echo "1" > /sys/class/gpio/gpio$boot_pin/value
+shutdown_pin = 5
+boot_pin = 12
+shootdown_pulse_min_ms = 200
 
-while : ; do
-  signal=$(</sys/class/gpio/gpio$shutdown_pin/value)
-  # While the button is not pressed, do nothing
-  if [ "$signal" = 0 ]; then /bin/sleep 0.2
-  else
-    start=$(date +%s%N | cut -b1-13)
-    while [ "$signal" = 1 ]; do
-      /bin/sleep 0.02
-      # If the button is pressed for more than `$reboot_pulse_max_ms`, power off
-      if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $reboot_pulse_max_ms ]; then
-        sudo /usr/sbin/poweroff
-        exit
-      fi
-      signal=$(</sys/class/gpio/gpio$shutdown_pin/value)
-    done
-    # If the button is pressed for more than `$reboot_pulse_min_ms`, reboot
-    if [ $(($(date +%s%N | cut -b1-13)-"$start")) -gt $reboot_pulse_min_ms ]; then
-      sudo /usr/sbin/reboot
-      exit
-    fi
-  fi
-done
+# Export GPIO pins and set direction
+def setup_gpio(pin, direction):
+    with open(f"/sys/class/gpio/export", "w") as export_file:
+        export_file.write(str(pin))
+    with open(f"/sys/class/gpio/gpio{pin}/direction", "w") as direction_file:
+        direction_file.write(direction)
+
+def set_gpio_value(pin, value):
+    with open(f"/sys/class/gpio/gpio{pin}/value", "w") as value_file:
+        value_file.write(value)
+
+# Setup GPIO pins
+setup_gpio(shutdown_pin, "in")
+setup_gpio(boot_pin, "out")
+set_gpio_value(boot_pin, "1")
+
+while True:
+    with open(f"/sys/class/gpio/gpio{shutdown_pin}/value", "r") as shutdown_pin_value_file:
+        signal = int(shutdown_pin_value_file.read().strip())
+
+    # While the button is not pressed, do nothing
+    if signal == 0:
+        time.sleep(0.2)
+    else:
+        start = time.time() * 1000
+        while signal == 1:
+            time.sleep(0.02)
+            # If the button is pressed for more than `shootdown_pulse_min_ms`, power off
+            if (time.time() * 1000 - start) > shootdown_pulse_min_ms:
+                os.system("sudo /usr/sbin/poweroff")
+                exit()
+            with open(f"/sys/class/gpio/gpio{shutdown_pin}/value", "r") as shutdown_pin_value_file:
+                signal = int(shutdown_pin_value_file.read().strip())
