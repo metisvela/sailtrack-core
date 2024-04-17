@@ -224,13 +224,17 @@ def boat_kalman_job():
 @tl.job(interval=timedelta(milliseconds=MQTT_JOB_INTERVAL_MS))
 def mqtt_job():
     global strain_data
-    pos_x = kalman_boat.x[0]
-    pos_y = kalman_boat.x[1]
-    pos_z = kalman_boat.x[2]
-    neu_speed = kalman_boat.x[3:6].reshape(3, 1)
+    state = np.asarray(kalman_boat.x)
+    pos_x = state[0]
+    pos_y = state[1]
+    pos_z = state[2]
+    neu_speed = state[3:6].reshape(3, 1)
     sog = math.sqrt(neu_speed[0] ** 2 + neu_speed[1] ** 2) * MPS_TO_KNOTS_MULTIPLIER
-    cog = math.degrees(np.arctan2(neu_speed[1], neu_speed[0]))
-    cog = angle_unwrap(cog)
+    cog = orientation["heading"]
+    if sog > 0.5:
+       cog = math.degrees(np.arctan2(neu_speed[1], neu_speed[0]))
+       cog = angle_unwrap(cog)
+    
     lat = pos_x * 360 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR + gps_ref["lat"]
     lon = pos_y * 360 / EARTH_CIRCUMFERENCE_METERS + gps_ref["lon"]
     altitude = pos_z + gps_ref["hMSL"]
@@ -245,19 +249,13 @@ def mqtt_job():
         if head_180 > cog_180:
             drift = -drift
     #logger.info("Strain recived msg: " + shroud_tension)
-    logger.info("Check variables type:\n")
-    logger.info(f"lon: {type(lon)}\n")
-    logger.info(f"lat: {type(lat)}\n") 
-    logger.info(f"cog: {type(cog)}\n")
-    logger.info(f"sog: {type(sog)}\n")
-    logger.info(f"altitude: {type(altitude)}\n")
 
     mqtt.publish("boat", json.dumps({
-        "lon": lon,
-        "lat": lat,
+        "lon": lon.item(),
+        "lat": lat.item(),
         "cog": cog,
         "sog": sog,
-        "altitude": altitude,
+        "altitude": altitude.item(),
         "ascensionSpeed": neu_speed[2].item(),
         "heading": orientation["heading"],
         "pitch": angle_wrap_180(orientation["pitch"]),
