@@ -275,9 +275,6 @@ def mqtt_job():
         else:
             converted_payload[key] = value
 
-    print(payload)
-    print(converted_payload)
-
     mqtt.publish("boat", json.dumps(converted_payload))
 
 
