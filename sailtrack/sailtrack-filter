@@ -250,7 +250,7 @@ def mqtt_job():
             drift = -drift
     #logger.info("Strain recived msg: " + shroud_tension)
 
-    mqtt.publish("boat", json.dumps({
+    payload = {
         "lon": lon.item(),
         "lat": lat.item(),
         "cog": cog,
@@ -262,7 +262,23 @@ def mqtt_job():
         "roll": angle_wrap_180(orientation["roll"]),
         "drift": drift,
         "shroud": shroud_tension
-    }))
+    }
+    converted_payload = {}
+
+    for key, value in payload.items():
+        if isinstance(value, (int, float)):
+            converted_payload[key] = float(value)
+        elif isinstance(value, str) and value.replace('.', '', 1).isdigit():
+            converted_payload[key] = float(value)
+        elif isinstance(value, np.generic):
+            converted_payload[key] = float(value.item())
+        else:
+            converted_payload[key] = value
+
+    print(payload)
+    print(converted_payload)
+
+    mqtt.publish("boat", json.dumps(converted_payload))
 
 
 formatter = logging.Formatter("[%(levelname)s] %(message)s")
