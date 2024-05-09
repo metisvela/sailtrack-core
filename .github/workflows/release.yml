@@ -1,0 +1,22 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install cross --git https://github.com/cross-rs/cross
+      - run: cargo install cargo-make
+      - run: sudo cargo make package
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: SailTrack-Core_RPi-ARMv8-Bookworm.7z
+          generate_release_notes: true

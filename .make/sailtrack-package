@@ -1,0 +1,56 @@
+#!/bin/bash
+
+# `sailtrack-package` - Script that builds the SailTrack OS image starting from a DietPi image.
+
+debian_release_name="Bookworm"
+dietpi_image_name="DietPi_RPi-ARMv8-$debian_release_name"
+sailtrack_image_name="SailTrack-Core_RPi-ARMv8-$debian_release_name"
+
+# Download and extract DietPi image
+wget -N "https://dietpi.com/downloads/images/$dietpi_image_name.img.xz" -P /tmp/sailtrack-package || exit 1
+7z e -aoa -o"/tmp/sailtrack-package/$dietpi_image_name" "/tmp/sailtrack-package/$dietpi_image_name.img.xz"
+
+# Mount image
+fp_loop=$(losetup --show -fP "/tmp/sailtrack-package/$dietpi_image_name/$dietpi_image_name.img")
+root_dir=/tmp/sailtrack-package/mnt
+mkdir -p $root_dir
+mount "${fp_loop}p2" $root_dir
+mount "${fp_loop}p1" $root_dir/boot
+
+# Copy SailTrack files
+cp -v LICENSE $root_dir/boot/sailtrack-LICENSE.txt
+cp -v README.md $root_dir/boot/sailtrack-README.md
+cp -v dietpi.txt $root_dir/boot/dietpi.txt
+cp -v Automation_Custom_Script.sh $root_dir/boot/Automation_Custom_Script.sh
+mkdir -p $root_dir/boot/sailtrack
+cp -vr sailtrack $root_dir/boot/sailtrack
+for binary in src/bin/*.rs
+do
+  cp -v target/armv7-unknown-linux-gnueabihf/release/"$(basename "$binary" .rs)" $root_dir/boot/sailtrack
+done
+cp -vrT rootfs $root_dir
+
+# Unmount image
+umount -R $root_dir
+losetup -d "$fp_loop"
+
+# Rename DietPi image to SailTrack image
+mv "/tmp/sailtrack-package/$dietpi_image_name/$dietpi_image_name.img" "/tmp/sailtrack-package/$dietpi_image_name/$sailtrack_image_name.img"
+
+# Update hashes
+echo -n "Generating hashes..."
+cat << EOF > "/tmp/sailtrack-package/$dietpi_image_name/hash.txt"
+FILE:   $sailtrack_image_name.img
+DATE:   $(date -u)
+MD5:    $(md5sum "/tmp/sailtrack-package/$dietpi_image_name/$sailtrack_image_name.img" | mawk '{print $1}')
+SHA1:   $(sha1sum "/tmp/sailtrack-package/$dietpi_image_name/$sailtrack_image_name.img" | mawk '{print $1}')
+SHA256: $(sha256sum "/tmp/sailtrack-package/$dietpi_image_name/$sailtrack_image_name.img" | mawk '{print $1}')
+EOF
+echo "done"
+
+# Update README
+cp -v README.md "/tmp/sailtrack-package/$dietpi_image_name"
+
+# Create archive
+(( $(free -m | mawk '/Mem:/{print $2}') < 1750 && $(nproc) > 2 )) && limit_threads='-mmt2'
+7z a -m0=lzma2 -mx=9 $limit_threads "$sailtrack_image_name.7z" "/tmp/sailtrack-package/$dietpi_image_name/*"

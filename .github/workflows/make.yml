@@ -1,0 +1,17 @@
+name: Make
+
+on:
+  push:
+  pull_request:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install cross --git https://github.com/cross-rs/cross
+      - run: cargo install cargo-make
+      - run: cargo make
