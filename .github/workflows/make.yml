@@ -6,7 +6,7 @@ on:
     types: [opened, reopened]
 
 env:
-  CICOLOR_FORCE: 1
+  CLICOLOR_FORCE: 1
   CARGO_TERM_COLOR: always
 
 jobs:
