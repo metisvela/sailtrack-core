@@ -3,12 +3,14 @@ name: Make
 on:
   push:
   pull_request:
+    types: [opened, reopened]
 
 env:
+  CICOLOR_FORCE: true
   CARGO_TERM_COLOR: always
 
 jobs:
-  package:
+  make:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4

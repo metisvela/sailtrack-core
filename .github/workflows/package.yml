@@ -4,6 +4,7 @@ on:
   workflow_dispatch:
 
 env:
+  CICOLOR_FORCE: true
   CARGO_TERM_COLOR: always
 
 jobs:
