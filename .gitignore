@@ -370,3 +370,7 @@ $RECYCLE.BIN/
 *.lnk
 
 # End of https://www.toptal.com/developers/gitignore/api/linux,macos,python,windows,visualstudiocode,intellij+all,rust
+
+### VisualStudioCode Patch ###
+# Ignore .vscode folder
+.vscode
