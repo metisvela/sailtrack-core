@@ -1,0 +1,22 @@
+name: Package
+
+on:
+  workflow_dispatch:
+
+env:
+  CLICOLOR_FORCE: 1
+  CARGO_TERM_COLOR: always
+
+jobs:
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: cargo install cross --git https://github.com/cross-rs/cross
+      - run: cargo install cargo-make
+      - run: sudo cargo make package
+      - uses: actions/upload-artifact@v4
+        with:
+          name: SailTrack-Core_RPi-ARMv8-Bookworm.7z
+          path: SailTrack-Core_RPi-ARMv8-Bookworm.7z
+          compression-level: 0

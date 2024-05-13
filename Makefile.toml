@@ -1,0 +1,18 @@
+[tasks.default]
+clear = true
+dependencies = [
+    "check-format",
+    "clippy",
+    "build-release",
+]
+
+[tasks.build-release]
+command = "cross"
+
+[tasks.package]
+clear = true
+condition = { platforms = [ "linux" ] }
+dependencies = [
+    "default"
+]
+script = { file = ".make/sailtrack-package" }

@@ -5,7 +5,7 @@
 <p align="center">
   <img src="https://img.shields.io/github/license/metisvela/sailtrack-core" />
   <img src="https://img.shields.io/github/v/release/metisvela/sailtrack-core" />
-  <img src="https://img.shields.io/github/actions/workflow/status/metisvela/sailtrack-core/build.yml" />
+  <img src="https://img.shields.io/github/actions/workflow/status/metisvela/sailtrack-core/make.yml" />
 </p>
 
 # SailTrack Core
