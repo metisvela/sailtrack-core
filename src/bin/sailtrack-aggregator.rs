@@ -1,11 +1,8 @@
-use eskf::ESKF;
-use std::intrinsics::drop_in_place;
-use std::slice::from_raw_parts;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use nalgebra::{DMatrix, DVector, Matrix2, Matrix3, Point3, Vector2, Vector3};
+use nalgebra::{ Matrix2, Matrix3, Point3, Vector2, Vector3};
 use rumqttc::{Client, Event, Incoming, MqttOptions, QoS};
 use serde::{Deserialize, Serialize};
 
@@ -17,7 +14,6 @@ const MPS_TO_KNTS_MULTIPLIER: f32 = 1.94384;
 const EARTH_CIRCUMFERENCE_METERS: f32 = 40075.0 * 1000.0;
 const KALMAN_SAMPLE_TIME_MS: u64 = 200;
 const LAT_FACTOR: f32 = 1.0;
-const GPS_DEAD_VALUE: i32 = 5;
 
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "camelCase")]
@@ -68,7 +64,7 @@ struct Boat {
     cog: f32,
     sog: f32,
     altitude: f32,
-    ascension: f32,
+    ascension_speed: f32,
     heading: f32,
     pitch: f32,
     roll: f32,
@@ -180,11 +176,24 @@ fn on_message_gps(message: Gps, measure_mutex: &mut Arc<Mutex<Measure>>) {
     measure_lock.new_measure = true;
 }
 
+fn angle_wrap_180(angle: f32) -> f32 {
+    (angle + 180.0) % 360.0 - 180.0
+}
+
+fn angle_unwrap(angle: f32) -> f32 {
+    let unwrapped_angle = angle % 360.0;
+    if unwrapped_angle < 0.0 {
+        unwrapped_angle + 360.0
+    } else {
+        unwrapped_angle
+    }
+}
+
 fn main() {
     // Defining structures and filter parameters
     let filter_ts = Duration::from_millis(KALMAN_SAMPLE_TIME_MS);
 
-    let mut input = Input {
+    let input = Input {
         acceleration: Vector3::new(0.0, 0.0, 0.0),
         rotation: Vector3::new(0.0, 0.0, 0.0),
         new_input: false,
@@ -207,14 +216,14 @@ fn main() {
         head_acc: 0.0,
     };
 
-    let mut measure = Measure {
+    let measure = Measure {
         data: empty_gps_struct,
         gps_ref: empty_gps_struct,
         new_measure: false,
     };
 
     // Creating ESKF object
-    let mut filter = eskf::Builder::new()
+    let filter = eskf::Builder::new()
         .acceleration_variance(0.01) // FIXME
         .rotation_variance(0.01) // FIXME
         .build();
@@ -280,7 +289,6 @@ fn main() {
     let input_clone = Arc::clone(&input_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
     thread::spawn(move || loop {
-
         // Check if the GPS fix has been obtained
         wait_for_fix_tipe(&measure_clone);
 
@@ -341,38 +349,44 @@ fn main() {
         let quat_orient = filter_lock.orientation;
         let euler_orient = quat_orient.euler_angles();
 
-        let sog = velocity.norm();
-        let cog = f32::atan2(velocity.y, velocity.x).to_degrees();
-
         let roll = euler_orient.0;
         let pitch = euler_orient.1;
         let heading = euler_orient.2;
 
-        let body_to_world_mtx = Matrix3::new(
-            f32::cos(heading),
-            f32::sin(heading),
-            0.0,
-            -f32::sin(heading),
-            f32::cos(heading),
-            0.0,
-            0.0,
-            0.0,
-            1.0,
-        );
-
-        let ned_pos = body_to_world_mtx * position;
+        let sog = velocity.norm() * MPS_TO_KNTS_MULTIPLIER;
+        let mut cog = heading;
+        let mut drift = 0.0;
+        if sog > 1.0 {
+            cog = f32::atan2(velocity.y, velocity.x).to_degrees();
+            cog = angle_unwrap(cog);
+            let cog_180 = angle_wrap_180(cog);
+            let head_180 = angle_wrap_180(heading);
+            drift = (head_180 - cog_180).abs();
+            if head_180.abs() + cog_180.abs() > 180.0 {
+                drift = 360.0 - drift;
+            }
+            if head_180 > cog_180 {
+                drift = -drift;
+            }
+        }
+        let measure_lock = acquire_lock(&measure_clone);
+        let lat =
+            position.x * 360.0 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR + measure_lock.gps_ref.lat;
+        let lon: f32 = position.y * 360.0 / EARTH_CIRCUMFERENCE_METERS + measure_lock.gps_ref.lon;
+        let altitude = position.z + measure_lock.gps_ref.h_msl;
+        drop(measure_lock);
 
         let message = Boat {
-            lon: 0.0,
-            lat: 0.0,
+            lon: lon,
+            lat: lat,
             cog: cog,
             sog: sog,
-            altitude: 0.0,
-            ascension: 0.0,
+            altitude: altitude,
+            ascension_speed: velocity.z,
             heading: heading,
             pitch: pitch,
             roll: roll,
-            drift: 0.0,
+            drift: drift,
         };
         client
             .publish(
