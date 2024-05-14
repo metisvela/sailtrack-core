@@ -15,4 +15,5 @@ condition = { platforms = [ "linux" ] }
 dependencies = [
     "default"
 ]
-script = { file = ".make/sailtrack-package" }
+command = "sudo"
+args = ["./.make/sailtrack-package"]
