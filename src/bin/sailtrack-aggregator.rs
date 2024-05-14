@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use nalgebra::{ Matrix2, Matrix3, Point3, Vector2, Vector3};
+use nalgebra::{Matrix2, Matrix3, Point3, Vector2, Vector3};
 use rumqttc::{Client, Event, Incoming, MqttOptions, QoS};
 use serde::{Deserialize, Serialize};
 
@@ -106,7 +106,7 @@ fn get_matrix_from_measure(
     Matrix2<f32>,
     f32,
 ) {
-    let measure_lock = acquire_lock(&measure_arc);
+    let measure_lock = acquire_lock(measure_arc);
 
     let position = Point3::new(
         (measure_lock.data.lat - measure_lock.gps_ref.lat) * EARTH_CIRCUMFERENCE_METERS / 360.0,
@@ -134,9 +134,9 @@ fn get_matrix_from_measure(
 }
 
 // Function that keeps on controll if the GPS fix is obtained
-fn wait_for_fix_tipe(measure_arc: &Arc<Mutex<Measure>>) -> () {
+fn wait_for_fix_tipe(measure_arc: &Arc<Mutex<Measure>>) {
     loop {
-        let measure_lock = acquire_lock(&measure_arc);
+        let measure_lock = acquire_lock(measure_arc);
         if measure_lock.gps_ref.fix_type == 3 {
             drop(measure_lock);
             break;
@@ -377,16 +377,16 @@ fn main() {
         drop(measure_lock);
 
         let message = Boat {
-            lon: lon,
-            lat: lat,
-            cog: cog,
-            sog: sog,
-            altitude: altitude,
+            lon,
+            lat,
+            cog,
+            sog,
+            altitude,
             ascension_speed: velocity.z,
-            heading: heading,
-            pitch: pitch,
-            roll: roll,
-            drift: drift,
+            heading,
+            pitch,
+            roll,
+            drift,
         };
         client
             .publish(
