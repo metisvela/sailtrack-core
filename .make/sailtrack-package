@@ -23,7 +23,7 @@ cp -v README.md $root_dir/boot/sailtrack-README.md
 cp -v dietpi.txt $root_dir/boot/dietpi.txt
 cp -v Automation_Custom_Script.sh $root_dir/boot/Automation_Custom_Script.sh
 mkdir -p $root_dir/boot/sailtrack
-cp -vr sailtrack $root_dir/boot/sailtrack
+cp -vr sailtrack $root_dir/boot
 for binary in src/bin/*.rs
 do
   cp -v target/armv7-unknown-linux-gnueabihf/release/"$(basename "$binary" .rs)" $root_dir/boot/sailtrack
