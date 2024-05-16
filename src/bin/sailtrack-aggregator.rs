@@ -1,3 +1,4 @@
+use rand::Rng;
 use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
@@ -44,6 +45,7 @@ struct Gps {
     epoch: i64,
     lon: f32,
     lat: f32,
+    #[serde(rename = "hMSL")]
     h_msl: f32,
     h_acc: f32,
     v_acc: f32,
@@ -72,7 +74,6 @@ struct Boat {
 }
 
 #[derive(Debug, Clone, Copy)]
-
 struct Measure {
     data: Gps,
     gps_ref: Gps,
@@ -92,12 +93,14 @@ fn acquire_lock<T>(mutex: &Arc<Mutex<T>>) -> std::sync::MutexGuard<T> {
         if let Ok(guard) = mutex.try_lock() {
             return guard;
         }
-        thread::sleep(Duration::from_millis(10));
+        let mut rng = rand::thread_rng();
+        let sleep_time: u64 = rng.gen_range(5..10);
+        thread::sleep(Duration::from_millis(sleep_time));
     }
 }
 
 fn get_matrix_from_measure(
-    measure_arc: &Arc<Mutex<Measure>>,
+    measure: &Measure,
 ) -> (
     Point3<f32>,
     Vector2<f32>,
@@ -106,30 +109,26 @@ fn get_matrix_from_measure(
     Matrix2<f32>,
     f32,
 ) {
-    let measure_lock = acquire_lock(measure_arc);
-
     let position = Point3::new(
-        (measure_lock.data.lat - measure_lock.gps_ref.lat) * EARTH_CIRCUMFERENCE_METERS / 360.0,
-        (measure_lock.data.lon - measure_lock.gps_ref.lon)
-            * EARTH_CIRCUMFERENCE_METERS
-            * LAT_FACTOR
-            / 360.0,
-        measure_lock.data.h_msl - measure_lock.gps_ref.h_msl,
+        (measure.data.lat - measure.gps_ref.lat) * EARTH_CIRCUMFERENCE_METERS / 360.0,
+        (measure.data.lon - measure.gps_ref.lon) * EARTH_CIRCUMFERENCE_METERS * LAT_FACTOR / 360.0,
+        measure.data.h_msl - measure.gps_ref.h_msl,
     );
-    let velocity_xy = Vector2::new(measure_lock.data.vel_n, measure_lock.data.vel_e);
-    let velocity_z = -measure_lock.data.vel_d;
+    let velocity_xy = Vector2::new(measure.data.vel_n, measure.data.vel_e);
+    let velocity_z = -measure.data.vel_d;
     let mut pos_variance = Matrix3::zeros();
-    pos_variance[(0, 0)] = 0.25 * measure_lock.data.h_acc.powf(2.0);
-    pos_variance[(1, 1)] = 0.25 * measure_lock.data.h_acc.powf(2.0);
-    pos_variance[(2, 2)] = 0.25 * measure_lock.data.h_acc.powf(2.0);
-    let vel_variance = Matrix2::identity() * 0.25 * measure_lock.data.s_acc.powf(2.0);
+    pos_variance[(0, 0)] = 0.25 * measure.data.h_acc.powf(2.0);
+    pos_variance[(1, 1)] = 0.25 * measure.data.h_acc.powf(2.0);
+    pos_variance[(2, 2)] = 0.25 * measure.data.h_acc.powf(2.0);
+    let vel_variance = Matrix2::identity() * 0.25 * measure.data.s_acc.powf(2.0);
+    let vel_z_variance = 0.25 * measure.data.s_acc.powf(2.0);
     (
         position,
         velocity_xy,
         velocity_z,
         pos_variance,
         vel_variance,
-        0.25 * measure_lock.data.s_acc.powf(2.0),
+        vel_z_variance,
     )
 }
 
@@ -146,9 +145,7 @@ fn wait_for_fix_tipe(measure_arc: &Arc<Mutex<Measure>>) {
     }
 }
 
-fn on_message_imu(message: Imu, input: &mut Arc<Mutex<Input>>) {
-    println!("Received IMU message: {message:?}");
-
+fn on_message_imu(message: Imu, input: &Arc<Mutex<Input>>) {
     let accel = Vector3::new(
         message.linear_accel.x,
         message.linear_accel.y,
@@ -159,11 +156,12 @@ fn on_message_imu(message: Imu, input: &mut Arc<Mutex<Input>>) {
     input_lock.new_input = true;
     input_lock.acceleration = accel;
     input_lock.rotation = orientation;
+    drop(input_lock);
 }
 
-fn on_message_gps(message: Gps, measure_mutex: &mut Arc<Mutex<Measure>>) {
-    println!("Received GPS message: {message:?}");
+fn on_message_gps(message: Gps, measure_mutex: &Arc<Mutex<Measure>>) {
     let mut measure_lock = acquire_lock(measure_mutex);
+    measure_lock.data.fix_type = message.fix_type;
     measure_lock.data.lat = message.lat * f32::powf(10.0, -7.0);
     measure_lock.data.lon = message.lon * f32::powf(10.0, -7.0);
     measure_lock.data.h_msl = message.h_msl * f32::powf(10.0, -3.0);
@@ -174,6 +172,7 @@ fn on_message_gps(message: Gps, measure_mutex: &mut Arc<Mutex<Measure>>) {
     measure_lock.data.v_acc = message.v_acc * f32::powf(10.0, -3.0);
     measure_lock.data.s_acc = message.s_acc * f32::powf(10.0, -3.0);
     measure_lock.new_measure = true;
+    drop(measure_lock);
 }
 
 fn angle_wrap_180(angle: f32) -> f32 {
@@ -240,9 +239,9 @@ fn main() {
     client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
     client.subscribe("sensor/imu0", QoS::AtMostOnce).unwrap();
 
-    // MQTT Callbacks thread
-    let mut measure_clone = Arc::clone(&measure_mutex);
-    let mut input_clone = Arc::clone(&input_mutex);
+    // // MQTT Callbacks thread
+    let measure_clone = Arc::clone(&measure_mutex);
+    let input_clone = Arc::clone(&input_mutex);
     thread::spawn(move || {
         for notification in connection.iter().flatten() {
             if let Event::Incoming(Incoming::Publish(packet)) = notification {
@@ -253,14 +252,14 @@ fn main() {
                         let payload = packet.payload.clone(); // Clone the payload for later use
                         on_message_imu(
                             serde_json::from_slice(payload.as_ref()).unwrap(),
-                            &mut input_clone,
+                            &input_clone,
                         );
                     }
                     "sensor/gps0" => {
                         let payload = packet.payload.clone(); // Clone the payload for later use
                         on_message_gps(
                             serde_json::from_slice(payload.as_ref()).unwrap(),
-                            &mut measure_clone,
+                            &measure_clone,
                         );
                     }
                     _ => (),
@@ -269,14 +268,15 @@ fn main() {
         }
     });
 
-    // GPS fix check
-    measure_clone = Arc::clone(&measure_mutex);
+    // // GPS fix check
+    let measure_clone = Arc::clone(&measure_mutex);
     thread::spawn(move || {
         println!("Waiting for GPS fix...");
         loop {
             let mut measure_lock = acquire_lock(&measure_clone);
             if measure_lock.data.fix_type == 3 {
                 measure_lock.gps_ref = measure_lock.data;
+                println!("GPS fix obtained");
                 break; // Exit the loop when GPS fix is obtained
             }
             drop(measure_lock); // Ensure the lock is released
@@ -291,7 +291,6 @@ fn main() {
     thread::spawn(move || loop {
         // Check if the GPS fix has been obtained
         wait_for_fix_tipe(&measure_clone);
-
         let thread_start = Instant::now();
         let mut measure_lock = acquire_lock(&measure_clone);
         let mut input_lock = acquire_lock(&input_clone);
@@ -301,7 +300,7 @@ fn main() {
         if measure_lock.new_measure {
             filter_lock.predict(input_lock.acceleration, input_lock.rotation, filter_ts);
             let (position, velocity_xy, velocity_z, pos_variance, vel_variance, vel_z_variance) =
-                get_matrix_from_measure(&measure_clone);
+                get_matrix_from_measure(&measure_lock);
             filter_lock
                 .observe_position_velocity2d(position, pos_variance, velocity_xy, vel_variance)
                 .unwrap();
@@ -314,7 +313,7 @@ fn main() {
         // Only reliable GPS data: only update
         else if !input_lock.new_input && measure_lock.new_measure {
             let (position, velocity_xy, velocity_z, pos_variance, vel_variance, vel_z_variance) =
-                get_matrix_from_measure(&measure_clone);
+                get_matrix_from_measure(&measure_lock);
             filter_lock
                 .observe_position_velocity2d(position, pos_variance, velocity_xy, vel_variance)
                 .unwrap();
@@ -332,7 +331,7 @@ fn main() {
         drop(measure_lock);
         drop(filter_lock);
         let elapsed = thread_start.elapsed();
-        if elapsed < filter_ts {
+        if elapsed.as_millis() < filter_ts.as_millis() {
             thread::sleep(filter_ts - elapsed);
         }
     });
@@ -375,7 +374,6 @@ fn main() {
         let lon: f32 = position.y * 360.0 / EARTH_CIRCUMFERENCE_METERS + measure_lock.gps_ref.lon;
         let altitude = position.z + measure_lock.gps_ref.h_msl;
         drop(measure_lock);
-
         let message = Boat {
             lon,
             lat,
@@ -396,7 +394,6 @@ fn main() {
                 serde_json::to_vec(&message).unwrap(),
             )
             .unwrap();
-        println!("Published boat measurement: {message:?}");
         thread::sleep(Duration::from_millis(1000 / MQTT_PUBLISH_FREQ_HZ));
     });
 }
