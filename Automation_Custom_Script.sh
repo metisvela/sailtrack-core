@@ -29,6 +29,7 @@ G_EXEC /boot/dietpi/dietpi-services enable sailtrack-status
 G_EXEC /boot/dietpi/dietpi-services enable sailtrack-timesync
 G_EXEC /boot/dietpi/dietpi-services enable sailtrack-tileserver
 G_EXEC /boot/dietpi/dietpi-services enable sailtrack-boat
+G_EXEC /boot/dietpi/dietpi-services enable sailtrack-kalman
 
 # Configure DietPi Banner
 G_EXEC touch /boot/dietpi/.dietpi-banner
