@@ -111,11 +111,11 @@ fn acquire_lock<T>(mutex: &Arc<Mutex<T>>) -> std::sync::MutexGuard<T> {
         let sleep_time: u64 = rng.gen_range(5..10);
         thread::sleep(Duration::from_millis(sleep_time));
         count += 1;
-        /*
+
         if count > 500{
             println!("Acquire lock failed on mutex containig value {:?}", std::any::type_name::<T>());           
         }
-        */
+
     }
 }
 
@@ -335,7 +335,7 @@ fn main() {
     let debug_clone = Arc::clone(&debug_mutex);
     thread::spawn(move || loop {
         // Check if the GPS fix has been obtained
-        // wait_for_fix_tipe(&gps_ref_clone);
+        wait_for_fix_tipe(&gps_ref_clone);
         let thread_start = Instant::now();
         let mut measure_lock = acquire_lock(&measure_clone);
         let mut input_lock = acquire_lock(&input_clone);
@@ -343,6 +343,7 @@ fn main() {
 
         // Reliable GPS and IMU data: predict and update
         if measure_lock.new_measure && input_lock.new_input {
+            println!("Predict and update");
             filter_predict(&mut filter_lock, &mut input_lock, filter_ts);
             filter_update(&mut filter_lock, &mut measure_lock);
             drop(input_lock);
@@ -351,12 +352,14 @@ fn main() {
         }
         // Only reliable GPS data: only update
         else if !input_lock.new_input && measure_lock.new_measure {
+            println!("Update");
             filter_update(&mut filter_lock, &mut measure_lock);
             drop(measure_lock);
             drop(filter_lock);
         }
         // Only reliable or old IMU data: only predict
         else {
+            println!("Predict");
             filter_predict(&mut filter_lock, &mut input_lock, filter_ts);
             drop(input_lock);
             drop(filter_lock);
@@ -371,9 +374,9 @@ fn main() {
         drop(debug_lock);
     });
 
+
     //MQTT publish thread
     let gps_ref_clone = Arc::clone(&gps_ref_mutex);
-    let measure_clone = Arc::clone(&measure_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
     let debug_clone = Arc::clone(&debug_mutex);
     thread::spawn(move || loop {
@@ -383,8 +386,9 @@ fn main() {
         let position = filter_lock.position;
         let velocity = filter_lock.velocity;
         let quat_orient = filter_lock.orientation;
-        let euler_orient = quat_orient.euler_angles();
+        drop(filter_lock);
 
+        let euler_orient = quat_orient.euler_angles();
         let roll = euler_orient.0;
         let pitch = euler_orient.1;
         let heading = euler_orient.2;
@@ -405,13 +409,13 @@ fn main() {
                 drift = -drift;
             }
         }
-        let measure_lock = acquire_lock(&measure_clone);
         let gps_ref_lock = acquire_lock(&gps_ref_clone);
         let lat =
-            position.x * 360.0 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR + gps_ref_lock.lat;
-        let lon: f32 = position.y * 360.0 / EARTH_CIRCUMFERENCE_METERS + gps_ref_lock.lon;
-        let altitude = position.z + gps_ref_lock.h_msl;
-        drop(measure_lock);
+        position.x * 360.0 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR + gps_ref_lock.lat*f32::powf(10.0, -7.0);
+        let lon: f32 = position.y * 360.0 / EARTH_CIRCUMFERENCE_METERS + gps_ref_lock.lon*f32::powf(10.0, -7.0);
+        let altitude = position.z + gps_ref_lock.h_msl*f32::powf(10.0, -3.0);
+        drop(gps_ref_lock);
+
         let message = Boat {
             lon,
             lat,
@@ -426,7 +430,7 @@ fn main() {
         };
         client
             .publish(
-                "boat",
+                "boat/kalman",
                 QoS::AtLeastOnce,
                 false,
                 serde_json::to_vec(&message).unwrap(),
@@ -454,5 +458,6 @@ fn main() {
         drop(gps_ref_lock);
         println!("GPS ref access granted:");
     };
+
 }
 
