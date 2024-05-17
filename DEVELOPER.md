@@ -143,8 +143,7 @@ This is done by configuring Grafana in `Automation_Custom_Script.sh` and putting
     Instead, [SailTrack Radio](https://github.com/metisvela/sailtrack-radio) has a built-in RTC clock for the GPS, and therefore it sends, along with the GPS data, the current time and date.
 * [`sailtrack-status`](sailtrack/sailtrack-status) - Python script that periodically sends the status data (e.g. battery voltage, CPU load, CPU temperature, etc.) of the module. 
     Needed for logging purposes.
-* [`sailtrack-processor`](sailtrack/sailtrack-processor) - Python script that processes the incoming sensor data.
-    This is required for calculating metrics (such as drift) and filtering (such as speed, latitude, and longitude).
+* [`sailtrack-boat`](sailtrack/sailtrack-boat) - Python script that processes the incoming sensor data to produce boat metrics (e.g. SOG, COG,...).
 
 All the tasks listed above are run as [systemd](https://en.wikipedia.org/wiki/Systemd) services, which means that systemd will start them, log their output in the system journal, and restart them if they fail.
 If you are unfamiliar with systemd, check out one of the many [online tutorials](https://www.digitalocean.com/community/tutorials/systemd-essentials-working-with-services-units-and-the-journal).

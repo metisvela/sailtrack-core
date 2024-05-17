@@ -39,7 +39,9 @@ Follow the instructions below to get the SailTrack Core OS correctly installed. 
 4. **(OPTIONAL)** Change the passwords from the default ones by modifying the `AUTO_SETUP_GLOBAL_PASSWORD` and the `SOFTWARE_WIFI_HOTSPOT_KEY` in the `dietpi.txt` file located inside the SD card.
 5. Eject the SD card from the computer and insert it into the Raspberry Pi.
 6. Connect the Raspberry Pi to internet with an ethernet cable.
-7. Power on the Raspberry Pi. The first run setup will automatically start to download and configure the required packages. *Note: this might take a few minutes, depending on the internet connection quality, follow the next step to check the installation progress.*
+7. Power on the Raspberry Pi. The first run setup will automatically start to download and configure the required packages.
+> [!NOTE]
+> This might take a few minutes, depending on the internet connection quality, follow the next step to check the installation progress.
 8. **(OPTIONAL)** Check the installation progress:
    1. Connect to the Raspberry Pi using a device connected to the same network:
       ```
@@ -57,7 +59,9 @@ Follow the instructions below to get the SailTrack Core OS correctly installed. 
 
 Once the installation process has been successfully completed, you can use SailTrack Core by following the steps below.
 
-1. Power on the module by pressing the power push button. Once the Wi-Fi network has been created, the other modules will automatically power on and SailTrack Core will start collecting the measurements coming from them. *Note: the automatic power on process might take a few minutes to complete, once a module is connected to the network the onboard LED will emit a steady light.*
+1. Power on the module by pressing the power push button. Once the Wi-Fi network has been created, the other modules will automatically power on and SailTrack Core will start collecting the measurements coming from them.
+> [!Note] 
+> The automatic power on process might take a few minutes to complete, once a module is connected to the network the onboard LED will emit a steady light.
 2. Connect to the `SailTrack-CoreNet` Wi-Fi network with your pc, smartphone, tablet,... (password: `sailtracknet` or the one set in Step 4 of the installation).
 3. Visit http://192.168.42.1:3001 (user: `admin`, password: `sailtrack` or the one set in Step 4 of the installation) to connect to the Grafana dashboards to see real-time data and browse the database. To learn more about using Grafana, visit the [official guide](https://grafana.com/docs/grafana/latest/getting-started/getting-started/).
 4. To power off the system press and hold the power push button of the Core module until the power light starts blinking. Once the power light turns off, all the other modules will automatically turn off.

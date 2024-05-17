@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
-# `sailtrack-processor` - Python script that processes the incoming sensor data. This is required for calculating
-# metrics (such as drift) and filtering (such as speed, latitude, and longitude).
+# `sailtrack-boat` - Python script that processes the incoming sensor data to produce boat metrics (e.g. SOG, COG,...).
 
 import json
 import logging
@@ -18,7 +17,7 @@ from timeloop import Timeloop
 MQTT_PUBLISH_FREQ_HZ = 5
 LOG_PRINT_FREQ_HZ = 0.1
 
-MQTT_CLIENT_ID = "sailtrack-processor"
+MQTT_CLIENT_ID = "sailtrack-boat"
 
 MQTT_JOB_INTERVAL_MS = 1000 / MQTT_PUBLISH_FREQ_HZ
 LOG_JOB_INTERVAL_MS = 1000 / LOG_PRINT_FREQ_HZ

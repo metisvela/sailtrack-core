@@ -1,11 +1,11 @@
 [Unit]
-Description=SailTrack-Processor
+Description=SailTrack-Boat
 After=mosquitto.service
 
 [Service]
 EnvironmentFile=-/etc/default/sailtrack
 Restart=on-failure
-ExecStart=/boot/sailtrack/sailtrack-processor
+ExecStart=/boot/sailtrack/sailtrack-boat
 
 [Install]
 WantedBy=multi-user.target
