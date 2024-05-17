@@ -1,0 +1,11 @@
+[Unit]
+Description=SailTrack-Kalman
+After=mosquitto.service
+
+[Service]
+EnvironmentFile=-/etc/default/sailtrack
+Restart=on-failure
+ExecStart=/boot/sailtrack/sailtrack-kalman
+
+[Install]
+WantedBy=multi-user.target
