@@ -25,6 +25,7 @@ G_CONFIG_INJECT "+ sailtrack-status" "+ sailtrack-status" /boot/dietpi/.dietpi-s
 G_CONFIG_INJECT "+ sailtrack-timesync" "+ sailtrack-timesync" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-tileserver" "+ sailtrack-tileserver" /boot/dietpi/.dietpi-services_include_exclude
 G_CONFIG_INJECT "+ sailtrack-boat" "+ sailtrack-boat" /boot/dietpi/.dietpi-services_include_exclude
+G_CONFIG_INJECT "+ sailtrack-kalman" "+ sailtrack-kalman" /boot/dietpi/.dietpi-services_include_exclude
 G_EXEC /boot/dietpi/dietpi-services enable sailtrack-status
 G_EXEC /boot/dietpi/dietpi-services enable sailtrack-timesync
 G_EXEC /boot/dietpi/dietpi-services enable sailtrack-tileserver
