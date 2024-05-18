@@ -15,7 +15,7 @@ G_EXEC rm /etc/systemd/system/dietpi-vpn.service
 G_EXEC rm /etc/systemd/system/dietpi-cloudshell.service
 
 # Install required packages
-G_AGI telegraf rsync
+G_AGI telegraf
 G_EXEC_OUTPUT=1 G_EXEC_OUTPUT_COL="\e[90m" G_EXEC pip3 install gpiozero paho-mqtt smbus2 timeloop
 
 # Enable SailTrack services

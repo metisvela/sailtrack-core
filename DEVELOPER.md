@@ -96,6 +96,28 @@ Since DietPi-Automation's built-in features aren't enough to fully configure the
 This script runs after the DietPi configuration, and it finishes the steps needed to set up SailTrack Core (e.g. it installs the missing packages, it sets up authentication tokens, etc.).
 Once the script ends, the Raspberry Pi is rebooted, and SailTrack Core is then successfully deployed.
 
+### Upload scripts to a running instance
+
+To update the `sailtrack-*` scripts on o running SailTrack Core instance, the `cargo make upload` task can be used while being connected to "SailTrack-CoreNet":
+
+```bash
+cargo make upload
+```
+
+This task will build and upload all the `sailtrack-*` scripts found locally.
+By default, the upload process will target SailTrack Core's default IP, namely `192.168.42.1`.
+However, an optional argument can be passed to specify a custom IP address:
+
+```bash
+cargo make upload <IP-ADDRESS>
+```
+
+Where `<IP-ADDRESS>` is the IP address of SailTrack Core in the local network.
+
+> [!NOTE]
+> The `upload` task only uploads the scripts.
+> If the script is run by a service, the service needs to be restarted to actually run the new script.
+
 ## Components
 
 In this section, each component of the system will be analyzed in detail.
