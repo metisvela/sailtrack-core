@@ -279,7 +279,7 @@ fn main() {
 
     // TODO: Add username and password authentication
     let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "192.168.42.1", 1883);
-    mqqt_opts.set_credentials("mosquitto","sailtrack");
+    mqqt_opts.set_credentials("mosquitto", "sailtrack");
 
     let (client, mut connection) = Client::new(mqqt_opts, 10);
     client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
