@@ -293,7 +293,6 @@ fn main() {
         for notification in connection.iter().flatten() {
             if let Event::Incoming(Incoming::Publish(packet)) = notification {
                 let topic = packet.topic.as_str().to_string(); // Clone the topic for later use
-
                 match topic.as_str() {
                     "sensor/imu0" => {
                         let payload = packet.payload.clone(); // Clone the payload for later use
@@ -354,10 +353,10 @@ fn main() {
         }
     });
 
-    //MQTT publish thread
+    //MQTT publish loop
     let gps_ref_clone = Arc::clone(&gps_ref_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
-    thread::spawn(move || loop {
+    loop {
         // Check if the GPS fix has been obtained
         wait_for_fix_tipe(&gps_ref_clone);
         let filter_lock = acquire_lock(&filter_clone);
@@ -416,5 +415,5 @@ fn main() {
             )
             .unwrap();
         thread::sleep(Duration::from_millis(1000 / MQTT_PUBLISH_FREQ_HZ));
-    });
+    }
 }
