@@ -4,7 +4,7 @@ use std::sync::{Arc, Mutex};
 use std::thread;
 use std::time::{Duration, Instant};
 
-use nalgebra::{Matrix2, Matrix3, Point3, Vector2, Vector3};
+use nalgebra::{Matrix3, Vector3};
 use rumqttc::{Client, Event, Incoming, MqttOptions, QoS};
 use serde::{Deserialize, Serialize};
 
@@ -76,7 +76,7 @@ struct Boat {
 
 #[derive(Debug, Clone, Copy)]
 struct Measure {
-    vel:Vector3<f32>,
+    vel: Vector3<f32>,
     vel_variance: Matrix3<f32>,
     new_measure: bool,
 }
@@ -239,8 +239,10 @@ fn main() {
     let filter_mutex = Arc::new(Mutex::new(filter));
 
     // TODO: Add username and password authentication
-    let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "192.168.42.1", 1883);
-    mqqt_opts.set_credentials("mosquitto", "sailtrack");
+    // let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "192.168.42.1", 1883);
+    // mqqt_opts.set_credentials("mosquitto", "sailtrack");
+
+    let mqqt_opts = MqttOptions::new("sailtrack-kalman", "localhost", 1883);
 
     let (client, mut connection) = Client::new(mqqt_opts, 10);
     client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
@@ -313,13 +315,12 @@ fn main() {
             thread::sleep(filter_ts - elapsed);
         }
     });
-
     //MQTT publish loop
     let gps_ref_clone = Arc::clone(&gps_ref_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
     loop {
         // Check if the GPS fix has been obtained
-        wait_for_fix_tipe(&gps_ref_clone);
+        // wait_for_fix_tipe(&gps_ref_clone);
         let filter_lock = acquire_lock(&filter_clone);
         let position = filter_lock.position;
         let velocity = filter_lock.velocity;
@@ -331,7 +332,7 @@ fn main() {
         let pitch = euler_orient.1;
         let heading = euler_orient.2;
 
-        let sog = velocity.norm() * MPS_TO_KNTS_MULTIPLIER;
+        let sog = (velocity.x.powi(2) + velocity.y.powi(2)).sqrt() * MPS_TO_KNTS_MULTIPLIER;
         let mut cog = heading;
         let mut drift = 0.0;
         if sog > 1.0 {
@@ -354,7 +355,6 @@ fn main() {
             + gps_ref_lock.lon * f32::powf(10.0, -7.0);
         let altitude = position.z + gps_ref_lock.h_msl * f32::powf(10.0, -3.0);
         drop(gps_ref_lock);
-
         let message = Boat {
             lon,
             lat,
