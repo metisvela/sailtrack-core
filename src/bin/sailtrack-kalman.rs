@@ -187,24 +187,14 @@ fn on_message_gps(message: Gps, gps_ref_arc: &Arc<Mutex<Gps>>, measure_arc: &Arc
 }
 
 // Kalman predict function on new input
-fn filter_predict(kalman: &mut Kalman<f32, U6, U6, U3>, input: &mut Input, filter_ts: Duration) {
-    kalman.predict(input.acceleration, input.rotation, filter_ts);
+fn filter_predict(kalman: &mut Kalman<f32, U6, U6, U3>, input: &mut Input) {
+    kalman.predict(Some(&input.acceleration), None, None, None);
     input.new_input = false;
 }
 
 // Kalman update function on new measure
-fn filter_update(kalman: &mut ESKF, measure: &mut Measure) {
-    kalman
-        .observe_position_velocity2d(
-            measure.position,
-            measure.pos_variance,
-            measure.velocity_xy,
-            measure.vel_variance,
-        )
-        .unwrap();
-    kalman
-        .observe_height(measure.velocity_z, measure.vel_z_variance)
-        .unwrap();
+fn filter_update(kalman: &mut Kalman<f32, U6, U6, U3>, measure: &mut Measure) {
+    kalman.update(&measure.meas, Some(&measure.meas_variance), None).unwrap();
     measure.new_measure = false;
 }
 
@@ -344,7 +334,7 @@ fn main() {
 
         match (measure_lock.new_measure, input_lock.new_input) {
             (true, true) => {
-                filter_predict(&mut filter_lock, &mut input_lock, filter_ts);
+                filter_predict(&mut filter_lock, &mut input_lock);
                 filter_update(&mut filter_lock, &mut measure_lock);
                 drop(input_lock);
                 drop(measure_lock);
@@ -356,7 +346,7 @@ fn main() {
                 drop(filter_lock);
             }
             _ => {
-                filter_predict(&mut filter_lock, &mut input_lock, filter_ts);
+                filter_predict(&mut filter_lock, &mut input_lock);
                 drop(input_lock);
                 drop(filter_lock);
             }
@@ -374,7 +364,7 @@ fn main() {
         // Check if the GPS fix has been obtained
         wait_for_fix_tipe(&gps_ref_clone);
         let filter_lock = acquire_lock(&filter_clone);
-        let position = filter_lock.position;
+        let position = filter_lock.x
         let velocity = filter_lock.velocity;
         let quat_orient = filter_lock.orientation;
         drop(filter_lock);
