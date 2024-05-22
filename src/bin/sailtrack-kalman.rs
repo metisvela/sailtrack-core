@@ -76,12 +76,8 @@ struct Boat {
 
 #[derive(Debug, Clone, Copy)]
 struct Measure {
-    position: Point3<f32>,
-    velocity_xy: Vector2<f32>,
-    velocity_z: f32,
-    pos_variance: Matrix3<f32>,
-    vel_variance: Matrix2<f32>,
-    vel_z_variance: f32,
+    vel:Vector3<f32>,
+    vel_variance: Matrix3<f32>,
     new_measure: bool,
 }
 
@@ -105,44 +101,21 @@ fn acquire_lock<T>(mutex: &Arc<Mutex<T>>) -> std::sync::MutexGuard<T> {
 }
 
 // Function to compute the measure for the Kalman filter from the raw GPS data
-fn get_measure_forom_gps(measure: &Gps, reference: &Gps) -> Measure {
-    let position = Point3::new(
-        (measure.lat * f32::powf(10.0, -7.0) - reference.lat * f32::powf(10.0, -7.0))
-            * EARTH_CIRCUMFERENCE_METERS
-            / 360.0,
-        (measure.lon * f32::powf(10.0, -7.0) - reference.lon * f32::powf(10.0, -7.0))
-            * EARTH_CIRCUMFERENCE_METERS
-            * LAT_FACTOR
-            / 360.0,
-        measure.h_msl * f32::powf(10.0, -3.0) - reference.h_msl * f32::powf(10.0, -3.0),
-    );
-    let velocity_xy = Vector2::new(
+fn get_measure_forom_gps(measure: &Gps) -> Measure {
+    let vel = Vector3::new(
         measure.vel_n * f32::powf(10.0, -3.0),
         measure.vel_e * f32::powf(10.0, -3.0),
+        measure.vel_d * f32::powf(10.0, -3.0),
     );
-    let velocity_z = -measure.vel_d * f32::powf(10.0, -3.0);
     let accuracy_penality_factor = 100.0;
-    let mut pos_variance = Matrix3::zeros();
-    pos_variance[(0, 0)] = 0.25 * (measure.h_acc * f32::powf(10.0, -3.0)).powf(2.0);
-    pos_variance[(1, 1)] = 0.25 * (measure.h_acc * f32::powf(10.0, -3.0)).powf(2.0);
-    pos_variance[(2, 2)] = 0.25 * (measure.v_acc * f32::powf(10.0, -3.0)).powf(2.0);
     let mut vel_variance =
-        Matrix2::identity() * 0.25 * (measure.s_acc * f32::powf(10.0, -3.0)).powf(2.0);
-    let mut vel_z_variance = 0.25 * (measure.s_acc * f32::powf(10.0, -3.0)).powf(2.0);
+        Matrix3::identity() * 0.25 * (measure.s_acc * f32::powf(10.0, -3.0)).powf(2.0);
     if measure.fix_type != 3 {
-        pos_variance[(0, 0)] *= accuracy_penality_factor;
-        pos_variance[(1, 1)] *= accuracy_penality_factor;
-        pos_variance[(2, 2)] *= accuracy_penality_factor;
         vel_variance *= accuracy_penality_factor;
-        vel_z_variance *= accuracy_penality_factor;
     }
     Measure {
-        position,
-        velocity_xy,
-        velocity_z,
-        pos_variance,
+        vel,
         vel_variance,
-        vel_z_variance,
         new_measure: true,
     }
 }
@@ -187,7 +160,7 @@ fn on_message_gps(message: Gps, gps_ref_arc: &Arc<Mutex<Gps>>, measure_arc: &Arc
     if gps_ref_lock.fix_type != 3 {
         *gps_ref_lock = message;
     }
-    let measure = get_measure_forom_gps(&message, &gps_ref_lock);
+    let measure = get_measure_forom_gps(&message);
     *measure_lock = measure;
     drop(measure_lock);
     drop(gps_ref_lock);
@@ -202,15 +175,7 @@ fn filter_predict(kalman: &mut ESKF, input: &mut Input, filter_ts: Duration) {
 // Kalman update function on new measure
 fn filter_update(kalman: &mut ESKF, measure: &mut Measure) {
     kalman
-        .observe_position_velocity2d(
-            measure.position,
-            measure.pos_variance,
-            measure.velocity_xy,
-            measure.vel_variance,
-        )
-        .unwrap();
-    kalman
-        .observe_height(measure.velocity_z, measure.vel_z_variance)
+        .observe_velocity(measure.vel, measure.vel_variance)
         .unwrap();
     measure.new_measure = false;
 }
@@ -256,12 +221,8 @@ fn main() {
     };
 
     let measure = Measure {
-        position: Point3::new(0.0, 0.0, 0.0),
-        velocity_xy: Vector2::new(0.0, 0.0),
-        velocity_z: 0.0,
-        pos_variance: Matrix3::zeros(),
-        vel_variance: Matrix2::zeros(),
-        vel_z_variance: 0.0,
+        vel: Vector3::zeros(),
+        vel_variance: Matrix3::zeros(),
         new_measure: false,
     };
 
