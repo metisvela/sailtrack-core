@@ -84,6 +84,7 @@ struct Measure {
 #[derive(Debug, Clone, Copy)]
 struct Input {
     acceleration: OVector<f32, U3>,
+    orientation: OVector<f32, U3>,
     new_input: bool,
 }
 
@@ -114,14 +115,13 @@ fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps) -> Measure {
         gps_data.vel_e * f32::powf(10.0, -3.0),
         gps_data.vel_d * f32::powf(10.0, -3.0),
     ];
-    
-    let meas:OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec.into_iter());
 
-   
+    let meas: OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec);
+
     let accuracy_penality_factor = 100.0;
     let mut meas_variance: OMatrix<f32, U6, U6> = OMatrix::zeros_generic(U6, U6);
     let acc_scaling = f32::powf(10.0, -3.0);
-    
+
     for i in 0..5 {
         let acc_value = match i {
             0 | 1 => gps_data.h_acc,
@@ -166,10 +166,13 @@ fn on_message_imu(message: Imu, input: &Arc<Mutex<Input>>) {
         message.linear_accel.y,
         message.linear_accel.z,
     ];
-    let accel = OVector::<f32, U3>::from_iterator(accel_vec.into_iter());
+    let accel = OVector::<f32, U3>::from_iterator(accel_vec);
+    let orient_vec = vec![message.euler.x, -message.euler.y, 360.0 - message.euler.z];
+    let orient = OVector::<f32, U3>::from_iterator(orient_vec);
     let mut input_lock = acquire_lock(input);
     input_lock.new_input = true;
     input_lock.acceleration = accel;
+    input_lock.orientation = orient;
     drop(input_lock);
 }
 
@@ -194,7 +197,9 @@ fn filter_predict(kalman: &mut Kalman<f32, U6, U6, U3>, input: &mut Input) {
 
 // Kalman update function on new measure
 fn filter_update(kalman: &mut Kalman<f32, U6, U6, U3>, measure: &mut Measure) {
-    kalman.update(&measure.meas, Some(&measure.meas_variance), None).unwrap();
+    kalman
+        .update(&measure.meas, Some(&measure.meas_variance), None)
+        .unwrap();
     measure.new_measure = false;
 }
 
@@ -217,6 +222,7 @@ fn main() {
 
     let input = Input {
         acceleration: OVector::<f32, U3>::zeros(),
+        orientation: OVector::<f32, U3>::zeros(),
         new_input: false,
     };
 
@@ -246,34 +252,76 @@ fn main() {
     // Creating ESKF object
     let w_std = 0.01;
     let sample_time = filter_ts.as_secs_f32();
-    let transition_mtx = OMatrix::<f32, U6, 
-    U6>::from_column_slice(&[
-        1.0, 0.0, 0.0, sample_time, 0.0, 0.0,
-        0.0, 1.0, 0.0, 0.0, sample_time, 0.0,
-        0.0, 0.0, 1.0, 0.0, 0.0, sample_time,
-        0.0, 0.0, 0.0, 1.0, 0.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 1.0, 0.0,
-        0.0, 0.0, 0.0, 0.0, 0.0, 1.0,
+    let transition_mtx = OMatrix::<f32, U6, U6>::from_column_slice(&[
+        1.0,
+        0.0,
+        0.0,
+        sample_time,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        sample_time,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        sample_time,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        0.0,
+        1.0,
     ]);
     let input_mtx = OMatrix::<f32, U6, U3>::from_row_slice(&[
-        sample_time.powi(2) / 2.0, 0.0, 0.0,
-        0.0, sample_time.powi(2) / 2.0, 0.0,
-        0.0, 0.0, sample_time.powi(2) / 2.0,
-        sample_time, 0.0, 0.0,
-        0.0, sample_time, 0.0,
-        0.0, 0.0, sample_time
+        sample_time.powi(2) / 2.0,
+        0.0,
+        0.0,
+        0.0,
+        sample_time.powi(2) / 2.0,
+        0.0,
+        0.0,
+        0.0,
+        sample_time.powi(2) / 2.0,
+        sample_time,
+        0.0,
+        0.0,
+        0.0,
+        sample_time,
+        0.0,
+        0.0,
+        0.0,
+        sample_time,
     ]);
     let output_mtx = OMatrix::<f32, U6, U6>::identity();
-    let noise_state_cov = input_mtx*input_mtx.transpose()*w_std;
+    let noise_state_cov = input_mtx * input_mtx.transpose() * w_std;
     let noise_meas_cov = OMatrix::<f32, U6, U6>::identity();
 
-    let mut filter = Kalman::<f32, U6, U6, U3>::default();
-
-    filter.F = transition_mtx;
-    filter.H = output_mtx;
-    filter.B = Some(input_mtx);
-    filter.Q = noise_state_cov;
-    filter.R = noise_meas_cov;
+    let filter = Kalman::<f32, nalgebra::Const<6>, nalgebra::Const<6>, nalgebra::Const<3>> {
+        F: transition_mtx,
+        H: output_mtx,
+        B: Some(input_mtx),
+        Q: noise_state_cov,
+        R: noise_meas_cov,
+        ..Default::default()
+    };
 
     // Defining Mutex for thread share
     let gps_ref_mutex = Arc::new(Mutex::new(gps_ref));
@@ -359,22 +407,23 @@ fn main() {
 
     //MQTT publish loop
     let gps_ref_clone = Arc::clone(&gps_ref_mutex);
+    let input_clone = Arc::clone(&input_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
     loop {
         // Check if the GPS fix has been obtained
+
+        let input_lock = acquire_lock(&input_clone);
+        let roll = input_lock.orientation.x;
+        let pitch = input_lock.orientation.y;
+        let heading = input_lock.orientation.z;
+        drop(input_lock);
+
         wait_for_fix_tipe(&gps_ref_clone);
         let filter_lock = acquire_lock(&filter_clone);
-        let position = filter_lock.x
-        let velocity = filter_lock.velocity;
-        let quat_orient = filter_lock.orientation;
-        drop(filter_lock);
+        let position = filter_lock.x.fixed_rows::<3>(0);
+        let velocity = filter_lock.x.fixed_rows::<3>(1);
 
-        let euler_orient = quat_orient.euler_angles();
-        let roll = euler_orient.0;
-        let pitch = euler_orient.1;
-        let heading = euler_orient.2;
-
-        let sog = velocity.norm() * MPS_TO_KNTS_MULTIPLIER;
+        let sog = (velocity.x.powi(2) + velocity.y.powi(2)).sqrt() * MPS_TO_KNTS_MULTIPLIER;
         let mut cog = heading;
         let mut drift = 0.0;
         if sog > 1.0 {
@@ -397,6 +446,8 @@ fn main() {
             + gps_ref_lock.lon * f32::powf(10.0, -7.0);
         let altitude = position.z + gps_ref_lock.h_msl * f32::powf(10.0, -3.0);
         drop(gps_ref_lock);
+        let z_speed = velocity.z * MPS_TO_KNTS_MULTIPLIER;
+        drop(filter_lock);
 
         let message = Boat {
             lon,
@@ -404,7 +455,7 @@ fn main() {
             cog,
             sog,
             altitude,
-            ascension_speed: velocity.z,
+            ascension_speed: z_speed,
             heading,
             pitch,
             roll,
@@ -418,6 +469,7 @@ fn main() {
                 serde_json::to_vec(&message).unwrap(),
             )
             .unwrap();
+
         thread::sleep(Duration::from_millis(1000 / MQTT_PUBLISH_FREQ_HZ));
     }
 }
