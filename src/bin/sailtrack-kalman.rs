@@ -90,12 +90,20 @@ struct Input {
 
 // Function to continuously try locking the mutex until successful
 fn acquire_lock<T>(mutex: &Arc<Mutex<T>>) -> std::sync::MutexGuard<T> {
+    let mut iter = 1;
     loop {
         if let Ok(guard) = mutex.try_lock() {
             return guard;
         }
         let mut rng = rand::thread_rng();
         let sleep_time: u64 = rng.gen_range(5..10);
+        iter += 1;
+        if iter > 100 {
+            println!(
+                "Failed to acquire lock on mutex lock of class {:?}",
+                std::any::type_name::<T>()
+            );
+        }
         thread::sleep(Duration::from_millis(sleep_time));
     }
 }
@@ -119,19 +127,26 @@ fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps) -> Measure {
     let meas: OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec);
 
     let accuracy_penality_factor = 100.0;
-    let mut meas_variance: OMatrix<f32, U6, U6> = OMatrix::zeros_generic(U6, U6);
+    let mut meas_variance = OMatrix::<f32, U6, U6>::identity();
     let acc_scaling = f32::powf(10.0, -3.0);
 
-    for i in 0..5 {
-        let acc_value = match i {
-            0 | 1 => gps_data.h_acc,
-            2 => gps_data.v_acc,
-            _ => gps_data.s_acc,
-        };
-        meas_variance[(i, i)] = 0.25 * acc_value.powf(2.0) * acc_scaling;
-        if gps_data.fix_type != 3 {
-            meas_variance[(i, i)] *= accuracy_penality_factor;
+    let mut diagonal_values = vec![
+        0.25 * (gps_data.h_acc * acc_scaling).powi(2),
+        0.25 * (gps_data.h_acc * acc_scaling).powi(2),
+        0.25 * (gps_data.v_acc * acc_scaling).powi(2),
+        0.25 * (gps_data.s_acc * acc_scaling).powi(2),
+        0.25 * (gps_data.s_acc * acc_scaling).powi(2),
+        0.25 * (gps_data.s_acc * acc_scaling).powi(2),
+    ];
+
+    if gps_data.fix_type != 3 {
+        for value in &mut diagonal_values {
+            *value *= accuracy_penality_factor;
         }
+    }
+
+    for i in 0..meas_variance.nrows() {
+        meas_variance[(i, i)] = diagonal_values[i];
     }
 
     Measure {
@@ -196,11 +211,23 @@ fn filter_predict(kalman: &mut Kalman<f32, U6, U6, U3>, input: &mut Input) {
 }
 
 // Kalman update function on new measure
-fn filter_update(kalman: &mut Kalman<f32, U6, U6, U3>, measure: &mut Measure) {
-    kalman
-        .update(&measure.meas, Some(&measure.meas_variance), None)
-        .unwrap();
-    measure.new_measure = false;
+fn filter_update(
+    kalman: &mut Kalman<f32, U6, U6, U3>,
+    measure: &mut Measure,
+) -> Result<(), &'static str> {
+    match kalman.update(&measure.meas, Some(&measure.meas_variance), None) {
+        Ok(_) => {
+            measure.new_measure = false;
+            Ok(())
+        }
+        Err(_) => {
+            println!(
+                "measure: {:?}, variance: {:?}",
+                measure.meas, measure.meas_variance
+            );
+            Err("Error occurred in filter update function")
+        }
+    }
 }
 
 fn angle_wrap_180(angle: f32) -> f32 {
@@ -315,6 +342,8 @@ fn main() {
     let noise_meas_cov = OMatrix::<f32, U6, U6>::identity();
 
     let filter = Kalman::<f32, nalgebra::Const<6>, nalgebra::Const<6>, nalgebra::Const<3>> {
+        x: OVector::<f32, U6>::zeros(),
+        P: OMatrix::<f32, U6, U6>::identity(),
         F: transition_mtx,
         H: output_mtx,
         B: Some(input_mtx),
@@ -330,8 +359,8 @@ fn main() {
     let filter_mutex = Arc::new(Mutex::new(filter));
 
     // TODO: Add username and password authentication
-    let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "192.168.42.1", 1883);
-    mqqt_opts.set_credentials("mosquitto", "sailtrack");
+    let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "localhost", 1883);
+    // mqqt_opts.set_credentials("mosquitto", "sailtrack");
 
     let (client, mut connection) = Client::new(mqqt_opts, 10);
     client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
@@ -379,28 +408,35 @@ fn main() {
         let mut measure_lock = acquire_lock(&measure_clone);
         let mut input_lock = acquire_lock(&input_clone);
         let mut filter_lock = acquire_lock(&filter_clone);
-
+        // println!("First Checkpoint");
         match (measure_lock.new_measure, input_lock.new_input) {
             (true, true) => {
                 filter_predict(&mut filter_lock, &mut input_lock);
-                filter_update(&mut filter_lock, &mut measure_lock);
+                filter_update(&mut filter_lock, &mut measure_lock).unwrap();
                 drop(input_lock);
                 drop(measure_lock);
                 drop(filter_lock);
+                // println!("filter and update");
             }
             (true, false) => {
-                filter_update(&mut filter_lock, &mut measure_lock);
+                filter_update(&mut filter_lock, &mut measure_lock).unwrap();
                 drop(measure_lock);
                 drop(filter_lock);
+                // println!("filter only");
             }
             _ => {
                 filter_predict(&mut filter_lock, &mut input_lock);
                 drop(input_lock);
                 drop(filter_lock);
+                // println!("predict only");
             }
         }
         let elapsed = thread_start.elapsed();
         if elapsed.as_millis() < filter_ts.as_millis() {
+            // println!(
+            //     "Sleeping for {}ms",
+            //     filter_ts.as_millis() - elapsed.as_millis()
+            // );
             thread::sleep(filter_ts - elapsed);
         }
     });
@@ -410,15 +446,12 @@ fn main() {
     let input_clone = Arc::clone(&input_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
     loop {
-        // Check if the GPS fix has been obtained
-
         let input_lock = acquire_lock(&input_clone);
         let roll = input_lock.orientation.x;
         let pitch = input_lock.orientation.y;
         let heading = input_lock.orientation.z;
         drop(input_lock);
 
-        wait_for_fix_tipe(&gps_ref_clone);
         let filter_lock = acquire_lock(&filter_clone);
         let position = filter_lock.x.fixed_rows::<3>(0);
         let velocity = filter_lock.x.fixed_rows::<3>(1);
