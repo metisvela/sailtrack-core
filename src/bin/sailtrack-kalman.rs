@@ -89,7 +89,7 @@ struct Input {
 }
 
 // Function to continuously try locking the mutex until successful
-fn acquire_lock<T>(mutex: &Arc<Mutex<T>>) -> std::sync::MutexGuard<T> {
+fn acquire_lock<T>(mutex: &Arc<Mutex<T>>, line: u32) -> std::sync::MutexGuard<T> {
     let mut iter = 1;
     loop {
         if let Ok(guard) = mutex.try_lock() {
@@ -100,8 +100,9 @@ fn acquire_lock<T>(mutex: &Arc<Mutex<T>>) -> std::sync::MutexGuard<T> {
         iter += 1;
         if iter > 100 {
             println!(
-                "Failed to acquire lock on mutex lock of class {:?}",
-                std::any::type_name::<T>()
+                "Failed to acquire lock on mutex lock of class {:?} at line {}",
+                std::any::type_name::<T>(),
+                line
             );
         }
         thread::sleep(Duration::from_millis(sleep_time));
@@ -121,7 +122,7 @@ fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps) -> Measure {
         gps_data.h_msl * f32::powf(10.0, -3.0) - reference.h_msl * f32::powf(10.0, -3.0),
         gps_data.vel_n * f32::powf(10.0, -3.0),
         gps_data.vel_e * f32::powf(10.0, -3.0),
-        gps_data.vel_d * f32::powf(10.0, -3.0),
+        -gps_data.vel_d * f32::powf(10.0, -3.0),
     ];
 
     let meas: OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec);
@@ -131,12 +132,12 @@ fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps) -> Measure {
     let acc_scaling = f32::powf(10.0, -3.0);
 
     let mut diagonal_values = vec![
-        0.25 * (gps_data.h_acc * acc_scaling).powi(2),
-        0.25 * (gps_data.h_acc * acc_scaling).powi(2),
-        0.25 * (gps_data.v_acc * acc_scaling).powi(2),
-        0.25 * (gps_data.s_acc * acc_scaling).powi(2),
-        0.25 * (gps_data.s_acc * acc_scaling).powi(2),
-        0.25 * (gps_data.s_acc * acc_scaling).powi(2),
+        100.0 * 100.0 * 0.25 * (gps_data.h_acc * acc_scaling).powi(2),
+        100.0 * 100.0 * 0.25 * (gps_data.h_acc * acc_scaling).powi(2),
+        100.0 * 100.0 * 0.25 * (gps_data.v_acc * acc_scaling).powi(2),
+        100.0 * 100.0 * 0.25 * (gps_data.s_acc * acc_scaling).powi(2),
+        100.0 * 100.0 * 0.25 * (gps_data.s_acc * acc_scaling).powi(2),
+        100.0 * 100.0 * 0.25 * (gps_data.s_acc * acc_scaling).powi(2),
     ];
 
     if gps_data.fix_type != 3 {
@@ -158,14 +159,14 @@ fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps) -> Measure {
 
 // Function that keeps on controll if the GPS fix is obtained
 fn wait_for_fix_tipe(gps_ref_arc: &Arc<Mutex<Gps>>) -> bool {
-    let gps_ref_lock = acquire_lock(gps_ref_arc);
+    let gps_ref_lock = acquire_lock(gps_ref_arc, line!());
     if gps_ref_lock.fix_type == 3 {
         drop(gps_ref_lock);
         return true;
     }
     drop(gps_ref_lock);
     loop {
-        let gps_ref_lock = acquire_lock(gps_ref_arc);
+        let gps_ref_lock = acquire_lock(gps_ref_arc, line!());
         if gps_ref_lock.fix_type == 3 {
             drop(gps_ref_lock);
             return true;
@@ -184,7 +185,7 @@ fn on_message_imu(message: Imu, input: &Arc<Mutex<Input>>) {
     let accel = OVector::<f32, U3>::from_iterator(accel_vec);
     let orient_vec = vec![message.euler.x, -message.euler.y, 360.0 - message.euler.z];
     let orient = OVector::<f32, U3>::from_iterator(orient_vec);
-    let mut input_lock = acquire_lock(input);
+    let mut input_lock = acquire_lock(input, line!());
     input_lock.new_input = true;
     input_lock.acceleration = accel;
     input_lock.orientation = orient;
@@ -192,8 +193,8 @@ fn on_message_imu(message: Imu, input: &Arc<Mutex<Input>>) {
 }
 
 fn on_message_gps(message: Gps, gps_ref_arc: &Arc<Mutex<Gps>>, measure_arc: &Arc<Mutex<Measure>>) {
-    let mut gps_ref_lock = acquire_lock(gps_ref_arc);
-    let mut measure_lock = acquire_lock(measure_arc);
+    let mut gps_ref_lock = acquire_lock(gps_ref_arc, line!());
+    let mut measure_lock = acquire_lock(measure_arc, line!());
 
     if gps_ref_lock.fix_type != 3 {
         *gps_ref_lock = message;
@@ -205,21 +206,17 @@ fn on_message_gps(message: Gps, gps_ref_arc: &Arc<Mutex<Gps>>, measure_arc: &Arc
 }
 
 // Kalman predict function on new input
-fn filter_predict(kalman: &mut Kalman<f32, U6, U6, U3>, input: &mut Input) {
+fn filter_predict(kalman: &mut Kalman<f32, U6, U6, U3>, input: &Input) {
     kalman.predict(Some(&input.acceleration), None, None, None);
-    input.new_input = false;
 }
 
 // Kalman update function on new measure
 fn filter_update(
     kalman: &mut Kalman<f32, U6, U6, U3>,
-    measure: &mut Measure,
+    measure: &Measure,
 ) -> Result<(), &'static str> {
     match kalman.update(&measure.meas, Some(&measure.meas_variance), None) {
-        Ok(_) => {
-            measure.new_measure = false;
-            Ok(())
-        }
+        Ok(_) => Ok(()),
         Err(_) => {
             println!(
                 "measure: {:?}, variance: {:?}",
@@ -359,7 +356,7 @@ fn main() {
     let filter_mutex = Arc::new(Mutex::new(filter));
 
     // TODO: Add username and password authentication
-    let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "localhost", 1883);
+    let mqqt_opts = MqttOptions::new("sailtrack-kalman", "localhost", 1883);
     // mqqt_opts.set_credentials("mosquitto", "sailtrack");
 
     let (client, mut connection) = Client::new(mqqt_opts, 10);
@@ -405,38 +402,47 @@ fn main() {
         // Check if the GPS fix has been obtained
         wait_for_fix_tipe(&gps_ref_clone);
         let thread_start = Instant::now();
-        let mut measure_lock = acquire_lock(&measure_clone);
-        let mut input_lock = acquire_lock(&input_clone);
-        let mut filter_lock = acquire_lock(&filter_clone);
-        // println!("First Checkpoint");
-        match (measure_lock.new_measure, input_lock.new_input) {
+        let mut measure_lock = acquire_lock(&measure_clone, line!());
+        let measure = *measure_lock;
+        if measure_lock.new_measure {
+            measure_lock.new_measure = false;
+        }
+        drop(measure_lock);
+
+        let mut input_lock = acquire_lock(&input_clone, line!());
+        let input = *input_lock;
+        if input_lock.new_input {
+            input_lock.new_input = false;
+        }
+        drop(input_lock);
+
+        let mut filter_lock = acquire_lock(&filter_clone, line!());
+        match (measure.new_measure, input.new_input) {
             (true, true) => {
-                filter_predict(&mut filter_lock, &mut input_lock);
-                filter_update(&mut filter_lock, &mut measure_lock).unwrap();
-                drop(input_lock);
-                drop(measure_lock);
+                filter_predict(&mut filter_lock, &input);
+                filter_update(&mut filter_lock, &measure).unwrap();
                 drop(filter_lock);
-                // println!("filter and update");
             }
             (true, false) => {
-                filter_update(&mut filter_lock, &mut measure_lock).unwrap();
-                drop(measure_lock);
+                filter_update(&mut filter_lock, &measure).unwrap();
                 drop(filter_lock);
-                // println!("filter only");
             }
-            _ => {
-                filter_predict(&mut filter_lock, &mut input_lock);
-                drop(input_lock);
+            (false, true) => {
+                filter_predict(&mut filter_lock, &input);
                 drop(filter_lock);
-                // println!("predict only");
+            }
+            (false, false) => {
+                let zero_meas: Input = Input {
+                    acceleration: OVector::<f32, U3>::zeros(),
+                    orientation: input.orientation,
+                    new_input: false,
+                };
+                filter_predict(&mut filter_lock, &zero_meas);
+                drop(filter_lock);
             }
         }
         let elapsed = thread_start.elapsed();
         if elapsed.as_millis() < filter_ts.as_millis() {
-            // println!(
-            //     "Sleeping for {}ms",
-            //     filter_ts.as_millis() - elapsed.as_millis()
-            // );
             thread::sleep(filter_ts - elapsed);
         }
     });
@@ -446,19 +452,20 @@ fn main() {
     let input_clone = Arc::clone(&input_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
     loop {
-        let input_lock = acquire_lock(&input_clone);
+        let input_lock = acquire_lock(&input_clone, line!());
         let roll = input_lock.orientation.x;
         let pitch = input_lock.orientation.y;
         let heading = input_lock.orientation.z;
         drop(input_lock);
 
-        let filter_lock = acquire_lock(&filter_clone);
+        let filter_lock = acquire_lock(&filter_clone, line!());
         let position = filter_lock.x.fixed_rows::<3>(0);
-        let velocity = filter_lock.x.fixed_rows::<3>(1);
+        let velocity = filter_lock.x.fixed_rows::<3>(3);
 
         let sog = (velocity.x.powi(2) + velocity.y.powi(2)).sqrt() * MPS_TO_KNTS_MULTIPLIER;
         let mut cog = heading;
-        let mut drift = 0.0;
+
+        let mut drift = -1.0;
         if sog > 1.0 {
             cog = f32::atan2(velocity.y, velocity.x).to_degrees();
             cog = angle_unwrap(cog);
@@ -472,7 +479,7 @@ fn main() {
                 drift = -drift;
             }
         }
-        let gps_ref_lock = acquire_lock(&gps_ref_clone);
+        let gps_ref_lock = acquire_lock(&gps_ref_clone, line!());
         let lat = position.x * 360.0 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR
             + gps_ref_lock.lat * f32::powf(10.0, -7.0);
         let lon: f32 = position.y * 360.0 / EARTH_CIRCUMFERENCE_METERS
