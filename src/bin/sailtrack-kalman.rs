@@ -356,8 +356,8 @@ fn main() {
     let filter_mutex = Arc::new(Mutex::new(filter));
 
     // TODO: Add username and password authentication
-    let mqqt_opts = MqttOptions::new("sailtrack-kalman", "localhost", 1883);
-    // mqqt_opts.set_credentials("mosquitto", "sailtrack");
+    let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "192.168.42.1", 1883);
+    mqqt_opts.set_credentials("mosquitto", "sailtrack");
 
     let (client, mut connection) = Client::new(mqqt_opts, 10);
     client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
@@ -503,7 +503,7 @@ fn main() {
         };
         client
             .publish(
-                "boat/kalman",
+                "boat",
                 QoS::AtLeastOnce,
                 false,
                 serde_json::to_vec(&message).unwrap(),
