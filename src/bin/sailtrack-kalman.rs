@@ -17,6 +17,7 @@ const EARTH_CIRCUMFERENCE_METERS: f32 = 40075.0 * 1000.0;
 const KALMAN_SAMPLE_TIME_MS: u64 = 200;
 const LAT_FACTOR: f32 = 1.0;
 
+
 #[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Euler {
@@ -73,11 +74,18 @@ struct Boat {
     roll: f32,
     drift: f32,
 }
+#[derive(Debug, Clone)]
+struct MeasureCollection<OVector> {
+    buffer: Vec<OVector>,
+    capacity: usize,
+    index: usize,
+}
 
-#[derive(Debug, Clone, Copy)]
+#[derive(Debug, Clone)]
 struct Measure {
     meas: OVector<f32, U6>,
     meas_variance: OMatrix<f32, U6, U6>,
+    past_measures: MeasureCollection<OVector<f32, U6>>,
     new_measure: bool,
 }
 
@@ -86,7 +94,45 @@ struct Input {
     acceleration: OVector<f32, U3>,
     orientation: OVector<f32, U3>,
     new_input: bool,
-}
+} 
+
+impl MeasureCollection<OVector<f32, U6>> {
+    fn new() -> Self {
+        let capacity:usize = 5;
+        let index:usize = 0;
+        MeasureCollection {
+            buffer: Vec::<OVector<f32, U6>>::with_capacity(5),
+            capacity, 
+            index,
+        }
+    }
+
+    fn add(&mut self, value: OVector<f32, U6>) {
+        if self.index > self.capacity - 1 {
+            self.index = 0;
+        }
+        self.buffer.insert(self.index, value);
+        self.index += 1;
+    }
+
+    fn get_variance(&self) -> OMatrix<f32, U6, U6> {
+        let mut covariance = OMatrix::<f32, U6, U6>::zeros();
+        if self.buffer.len() <= self.capacity {
+            covariance = OMatrix::<f32, U6, U6>::identity()
+        }
+        let mut sum = OVector::<f32, U6>::zeros();
+        for observation in &self.buffer {
+            sum += observation;
+        }
+        let mean = sum / self.capacity as f32;
+        for observation in &self.buffer {
+            let centered_observation = observation - mean;
+            covariance += centered_observation * centered_observation.transpose();
+        }
+        covariance /= (self.capacity - 1) as f32;
+        covariance
+    }
+    }
 
 // Function to continuously try locking the mutex until successful
 fn acquire_lock<T>(mutex: &Arc<Mutex<T>>, line: u32) -> std::sync::MutexGuard<T> {
@@ -110,7 +156,7 @@ fn acquire_lock<T>(mutex: &Arc<Mutex<T>>, line: u32) -> std::sync::MutexGuard<T>
 }
 
 // Function to compute the measure for the Kalman filter from the raw GPS data
-fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps) -> Measure {
+fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps, measure_struct: &mut Measure){
     let meas_vec = vec![
         (gps_data.lat * f32::powf(10.0, -7.0) - reference.lat * f32::powf(10.0, -7.0))
             * EARTH_CIRCUMFERENCE_METERS
@@ -125,36 +171,19 @@ fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps) -> Measure {
         -gps_data.vel_d * f32::powf(10.0, -3.0),
     ];
 
+    print!("\nNo lock here\n");
+
     let meas: OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec);
 
     let accuracy_penality_factor = 100.0;
-    let mut meas_variance = OMatrix::<f32, U6, U6>::identity();
-    let acc_scaling = f32::powf(10.0, -3.0);
 
-    let mut diagonal_values = vec![
-        100.0 * 100.0 * 0.25 * (gps_data.h_acc * acc_scaling).powi(2),
-        100.0 * 100.0 * 0.25 * (gps_data.h_acc * acc_scaling).powi(2),
-        100.0 * 100.0 * 0.25 * (gps_data.v_acc * acc_scaling).powi(2),
-        100.0 * 100.0 * 0.25 * (gps_data.s_acc * acc_scaling).powi(2),
-        100.0 * 100.0 * 0.25 * (gps_data.s_acc * acc_scaling).powi(2),
-        100.0 * 100.0 * 0.25 * (gps_data.s_acc * acc_scaling).powi(2),
-    ];
-
+    measure_struct.meas = meas;
+    measure_struct.past_measures.add(meas);
+    measure_struct.meas_variance = measure_struct.past_measures.get_variance();
     if gps_data.fix_type != 3 {
-        for value in &mut diagonal_values {
-            *value *= accuracy_penality_factor;
-        }
+        measure_struct.meas_variance *= accuracy_penality_factor;
     }
-
-    for i in 0..meas_variance.nrows() {
-        meas_variance[(i, i)] = diagonal_values[i];
-    }
-
-    Measure {
-        meas,
-        meas_variance,
-        new_measure: true,
-    }
+    measure_struct.new_measure = true;
 }
 
 // Function that keeps on controll if the GPS fix is obtained
@@ -199,8 +228,7 @@ fn on_message_gps(message: Gps, gps_ref_arc: &Arc<Mutex<Gps>>, measure_arc: &Arc
     if gps_ref_lock.fix_type != 3 {
         *gps_ref_lock = message;
     }
-    let measure = get_measure_forom_gps(&message, &gps_ref_lock);
-    *measure_lock = measure;
+    get_measure_forom_gps(&message, &gps_ref_lock, &mut measure_lock);
     drop(measure_lock);
     drop(gps_ref_lock);
 }
@@ -270,11 +298,12 @@ fn main() {
     let measure = Measure {
         meas: OVector::<f32, U6>::zeros(),
         meas_variance: OMatrix::<f32, U6, U6>::identity(),
+        past_measures: MeasureCollection::new(),
         new_measure: false,
     };
 
     // Creating ESKF object
-    let w_std = 0.01;
+    let w_std = 0.001;
     let sample_time = filter_ts.as_secs_f32();
     let transition_mtx = OMatrix::<f32, U6, U6>::from_column_slice(&[
         1.0,
@@ -356,8 +385,8 @@ fn main() {
     let filter_mutex = Arc::new(Mutex::new(filter));
 
     // TODO: Add username and password authentication
-    let mut mqqt_opts = MqttOptions::new("sailtrack-kalman", "192.168.42.1", 1883);
-    mqqt_opts.set_credentials("mosquitto", "sailtrack");
+    let mqqt_opts = MqttOptions::new("sailtrack-kalman", "localhost", 1883);
+    //mqqt_opts.set_credentials("mosquitto", "sailtrack");
 
     let (client, mut connection) = Client::new(mqqt_opts, 10);
     client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
@@ -403,28 +432,27 @@ fn main() {
         wait_for_fix_tipe(&gps_ref_clone);
         let thread_start = Instant::now();
         let mut measure_lock = acquire_lock(&measure_clone, line!());
-        let measure = *measure_lock;
-        if measure_lock.new_measure {
-            measure_lock.new_measure = false;
+        let measure = &mut *measure_lock;
+        if measure.new_measure {
+            measure.new_measure = false;
         }
-        drop(measure_lock);
-
+    
         let mut input_lock = acquire_lock(&input_clone, line!());
         let input = *input_lock;
         if input_lock.new_input {
             input_lock.new_input = false;
         }
-        drop(input_lock);
-
+    
         let mut filter_lock = acquire_lock(&filter_clone, line!());
         match (measure.new_measure, input.new_input) {
+       
             (true, true) => {
                 filter_predict(&mut filter_lock, &input);
-                filter_update(&mut filter_lock, &measure).unwrap();
+                filter_update(&mut filter_lock, measure).unwrap();
                 drop(filter_lock);
             }
             (true, false) => {
-                filter_update(&mut filter_lock, &measure).unwrap();
+                filter_update(&mut filter_lock, measure).unwrap();
                 drop(filter_lock);
             }
             (false, true) => {
