@@ -170,13 +170,8 @@ fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps, measure_struct: &mut M
         gps_data.vel_e * f32::powf(10.0, -3.0),
         -gps_data.vel_d * f32::powf(10.0, -3.0),
     ];
-
-    print!("\nNo lock here\n");
-
     let meas: OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec);
-
     let accuracy_penality_factor = 100.0;
-
     measure_struct.meas = meas;
     measure_struct.past_measures.add(meas);
     measure_struct.meas_variance = measure_struct.past_measures.get_variance();
