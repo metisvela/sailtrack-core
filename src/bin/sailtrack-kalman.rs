@@ -38,7 +38,7 @@ struct LinearAccel {
     z: f32,
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Copy, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Imu {
     euler: Euler,
@@ -65,6 +65,27 @@ struct Gps {
     head_acc: f32,
 }
 
+impl Default for Gps {
+    fn default() -> Gps {
+        Gps {
+            fix_type: 0,
+            epoch: 0,
+            lon: 0.0,
+            lat: 0.0,
+            h_msl: 0.0,
+            h_acc: 0.0,
+            v_acc: 0.0,
+            vel_n: 0.0,
+            vel_e: 0.0,
+            vel_d: 0.0,
+            g_speed: 0.0,
+            head_mot: 0.0,
+            s_acc: 0.0,
+            head_acc: 0.0,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct Boat {
@@ -79,6 +100,7 @@ struct Boat {
     roll: f32,
     drift: f32,
 }
+
 #[derive(Debug, Clone)]
 struct MeasureCollection<OVector> {
     buffer: Vec<OVector>,
@@ -93,10 +115,29 @@ struct Measure {
     variance_handler: MeasureCollection<OVector<f32, U6>>,
 }
 
+impl Default for Measure {
+    fn default() -> Measure {
+        Measure {
+            meas: OVector::<f32, U6>::zeros(),
+            meas_variance: OMatrix::<f32, U6, U6>::identity(),
+            variance_handler: MeasureCollection::<OVector<f32, U6>>::new(),
+        }
+    }
+}
+
 #[derive(Debug, Clone, Copy)]
 struct Input {
     acceleration: OVector<f32, U3>,
     orientation: OVector<f32, U3>,
+}
+
+impl Default for Input {
+    fn default() -> Input {
+        Input {
+            acceleration: OVector::<f32, U3>::zeros(),
+            orientation: OVector::<f32, U3>::zeros(),
+        }
+    }
 }
 
 impl MeasureCollection<OVector<f32, U6>> {
@@ -137,55 +178,65 @@ impl MeasureCollection<OVector<f32, U6>> {
     }
 }
 
-fn read_arc<T>(arc: &Arc<RwLock<T>>, line: u32) -> std::sync::RwLockReadGuard<T> {
-    let mut iter = 1;
-    loop {
-        match arc.read() {
+fn read_arc<T>(arc: &Arc<RwLock<T>>, line: u32) -> T
+where
+    T: Clone,
+{
+    let mut iter = 0;
+    let var: T;    
+    loop{
+        match arc.try_read() {
             Ok(content) => {
-                return content;
-            }
+                var = content.clone();
+                break;
+            },
             Err(_) => {
-                let mut rng = rand::thread_rng();
-                let sleep_time: u64 = rng.gen_range(5..10);
                 iter += 1;
                 if iter > 100 {
                     println!(
-                        "Failed to acquire lock on mutex lock of class {:?} at line {}",
+                        "Failed to read mutex {:?} at line {}",
                         std::any::type_name::<T>(),
                         line
                     );
                 }
+                let mut rng = rand::thread_rng();
+                let sleep_time = rng.gen_range(5..10);
+                thread::sleep(Duration::from_millis(sleep_time));
+            }
+        }
+    }
+    return var;
+}
+
+fn write_arc<T>(arc: &Arc<RwLock<T>>, value: T, line: u32)
+where
+    T: Clone,
+{
+    let mut iter = 0;
+    loop{
+        match arc.try_write() {
+            Ok(mut content) => {
+                *content = value.clone();
+            }
+            Err(_) => {
+                iter += 1;
+                if iter > 100 {
+                    println!(
+                        "Failed to write mutex {:?} at line {}",
+                        std::any::type_name::<T>(),
+                        line
+                    );
+                }
+                let mut rng = rand::thread_rng();
+                let sleep_time = rng.gen_range(5..10);
                 thread::sleep(Duration::from_millis(sleep_time));
             }
         }
     }
 }
 
-fn write_arc<T>(arc: &Arc<RwLock<T>>, line: u32) -> std::sync::RwLockWriteGuard<T> {
-    let mut iter = 1;
-    loop {
-        match arc.write() {
-            Ok(content) => {
-                return content;
-            }
-            Err(_) => {
-                let mut rng = rand::thread_rng();
-                let sleep_time: u64 = rng.gen_range(5..10);
-                iter += 1;
-                if iter > 100 {
-                    println!(
-                        "Failed to acquire lock on mutex lock of class {:?} at line {}",
-                        std::any::type_name::<T>(),
-                        line
-                    );
-                }
-                thread::sleep(Duration::from_millis(sleep_time));
-            }
-        }
-    }
-}
 // Function to compute the measure for the Kalman filter from the raw GPS data
-fn get_measure_forom_gps(gps_data: &Gps, reference: &Gps, measure_struct: &mut Measure) {
+fn set_measure_forom_gps(gps_data: &Gps, reference: &Gps, measure_struct: &mut Measure) {
     let meas_vec = vec![
         (gps_data.lat * f32::powf(10.0, -7.0) - reference.lat * f32::powf(10.0, -7.0))
             * EARTH_CIRCUMFERENCE_METERS
@@ -218,10 +269,11 @@ fn on_message_imu(message: Imu, input: &Arc<RwLock<Input>>) {
     let accel = OVector::<f32, U3>::from_iterator(accel_vec);
     let orient_vec = vec![message.euler.x, -message.euler.y, 360.0 - message.euler.z];
     let orient = OVector::<f32, U3>::from_iterator(orient_vec);
-    let mut input_lock = write_arc(input, line!());
-    input_lock.acceleration = accel;
-    input_lock.orientation = orient;
-    drop(input_lock);
+    let new_input = Input {
+        acceleration: accel,
+        orientation: orient,
+    };
+    write_arc(input, new_input, line!());
 }
 
 fn on_message_gps(
@@ -229,15 +281,14 @@ fn on_message_gps(
     gps_ref_arc: &Arc<RwLock<Gps>>,
     measure_arc: &Arc<RwLock<Measure>>,
 ) {
-    let mut gps_ref_lock = write_arc(gps_ref_arc, line!());
-    let mut measure_lock = write_arc(measure_arc, line!());
+    let gps_ref = read_arc(gps_ref_arc, line!());
+    let mut measure = read_arc(measure_arc, line!());
 
-    if gps_ref_lock.fix_type != 3 {
-        *gps_ref_lock = message;
+    if gps_ref.fix_type != 3 {
+        write_arc(gps_ref_arc, message, line!());
     }
-    get_measure_forom_gps(&message, &gps_ref_lock, &mut measure_lock);
-    drop(measure_lock);
-    drop(gps_ref_lock);
+    set_measure_forom_gps(&message, &gps_ref, &mut measure);
+    write_arc(measure_arc, measure, line!());
 }
 
 // Kalman predict function on new input
@@ -279,11 +330,6 @@ fn main() {
     // Defining structures and filter parameters
     let filter_ts = Duration::from_millis(KALMAN_SAMPLE_TIME_MS);
 
-    let input = Input {
-        acceleration: OVector::<f32, U3>::zeros(),
-        orientation: OVector::<f32, U3>::zeros(),
-    };
-
     let gps_ref = Gps {
         fix_type: 0,
         epoch: 0,
@@ -301,11 +347,8 @@ fn main() {
         head_acc: 0.0,
     };
 
-    let measure = Measure {
-        meas: OVector::<f32, U6>::zeros(),
-        meas_variance: OMatrix::<f32, U6, U6>::identity(),
-        variance_handler: MeasureCollection::<OVector<f32, U6>>::new(),
-    };
+    let input = Input::default();
+    let measure = Measure::default();
 
     // Creating ESKF object
     let w_std = 0.001;
@@ -466,24 +509,24 @@ fn main() {
             }
         }
 
-        let mut filter_lock = write_arc(&filter_clone, line!());
+        let mut filter = read_arc(&filter_clone, line!());
         match (gps_recieved_flag, imu_recieved_flag) {
             (true, true) => {
-                filter_predict(&mut filter_lock, &input);
-                filter_update(&mut filter_lock, &measure).unwrap();
-                drop(filter_lock);
+                filter_predict(&mut filter, &input);
+                filter_update(&mut filter, &measure).unwrap();
+                write_arc(&filter_clone, filter, line!());
             }
             (true, false) => {
-                filter_update(&mut filter_lock, &measure).unwrap();
-                drop(filter_lock);
+                filter_update(&mut filter, &measure).unwrap();
+                write_arc(&filter_clone, filter, line!());
             }
             (false, true) => {
-                filter_predict(&mut filter_lock, &input);
-                drop(filter_lock);
+                filter_predict(&mut filter, &input);
+                write_arc(&filter_clone, filter, line!());
             }
             (false, false) => {
-                filter_predict(&mut filter_lock, &zero_input);
-                drop(filter_lock);
+                filter_predict(&mut filter, &zero_input);
+                write_arc(&filter_clone, filter, line!());
             }
         }
         let elapsed = thread_start.elapsed();
@@ -497,27 +540,32 @@ fn main() {
     let input_clone = Arc::clone(&input_mutex);
     let filter_clone = Arc::clone(&filter_mutex);
     loop {
-        let input_lock = read_arc(&input_clone, line!());
-        let roll = input_lock.orientation.x;
-        let pitch = input_lock.orientation.y;
-        let heading = input_lock.orientation.z;
-        drop(input_lock);
+        let input = read_arc(&input_clone, line!());
+        let roll = input.orientation.x;
+        let pitch = input.orientation.y;
+        let heading = input.orientation.z;
 
-        let filter_read = {
-            let filter_lock = read_arc(&filter_clone, line!());
-            filter_lock.clone()
+        //let filter = read_arc(&filter_clone, line!());
+        let filter = Kalman::<f32, nalgebra::Const<6>, nalgebra::Const<6>, nalgebra::Const<3>> {
+            x: OVector::<f32, U6>::zeros(),
+            P: OMatrix::<f32, U6, U6>::identity(),
+            F: transition_mtx,
+            H: output_mtx,
+            B: Some(input_mtx),
+            Q: noise_state_cov,
+            R: noise_meas_cov,
+            ..Default::default()
         };
 
-        let position = filter_read.x.fixed_rows::<3>(0);
-        let velocity = filter_read.x.fixed_rows::<3>(3);
+        let position = filter.x.fixed_rows::<3>(0);
+        let velocity = filter.x.fixed_rows::<3>(3);
         // Position metrics
-        let gps_ref_lock = read_arc(&gps_ref_clone, line!());
+        let gps_ref = read_arc(&gps_ref_clone, line!());
         let lat = position.x * 360.0 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR
-            + gps_ref_lock.lat * f32::powf(10.0, -7.0);
-        let lon: f32 = position.y * 360.0 / EARTH_CIRCUMFERENCE_METERS
-            + gps_ref_lock.lon * f32::powf(10.0, -7.0);
-        let altitude = position.z + gps_ref_lock.h_msl * f32::powf(10.0, -3.0);
-        drop(gps_ref_lock);
+            + gps_ref.lat * f32::powf(10.0, -7.0);
+        let lon: f32 =
+            position.y * 360.0 / EARTH_CIRCUMFERENCE_METERS + gps_ref.lon * f32::powf(10.0, -7.0);
+        let altitude = position.z + gps_ref.h_msl * f32::powf(10.0, -3.0);
         let z_speed = velocity.z * MPS_TO_KNTS_MULTIPLIER;
 
         // Velocity metrics
