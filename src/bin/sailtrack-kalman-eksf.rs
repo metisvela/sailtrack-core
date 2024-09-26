@@ -1,12 +1,15 @@
 use kalmanfilt::kalman::kalman_filter::KalmanFilter as Kalman;
+use log::{debug, info};
+use env_logger;
 use rand::Rng;
-use std::sync::{Arc, RwLock};
-use std::thread;
-use std::time::{Duration, Instant};
-
 use nalgebra::{OMatrix, OVector, U3, U6};
-use rumqttc::{Client, Event, Incoming, MqttOptions, QoS};
+use rumqttc::Event::Incoming;
+use rumqttc::Packet::Publish;
+use rumqttc::{Client, MqttOptions, QoS};
 use serde::{Deserialize, Serialize};
+use std::sync::{Arc, RwLock};
+use std::thread::{sleep, spawn};
+use std::time::{Duration, Instant};
 
 // Connection parameters
 const MQTT_PUBLISH_FREQ_HZ: u64 = 5;
@@ -201,7 +204,7 @@ where
                 }
                 let mut rng = rand::thread_rng();
                 let sleep_time = rng.gen_range(5..10);
-                thread::sleep(Duration::from_millis(sleep_time));
+                sleep(Duration::from_millis(sleep_time));
             }
         }
     }
@@ -229,66 +232,58 @@ where
                 }
                 let mut rng = rand::thread_rng();
                 let sleep_time = rng.gen_range(5..10);
-                thread::sleep(Duration::from_millis(sleep_time));
+                sleep(Duration::from_millis(sleep_time));
             }
         }
     }
 }
 
-// Function to compute the measure for the Kalman filter from the raw GPS data
-fn set_measure_forom_gps(gps_data: &Gps, reference: &Gps, measure_struct: &mut Measure) {
-    let meas_vec = vec![
-        (gps_data.lat * f32::powf(10.0, -7.0) - reference.lat * f32::powf(10.0, -7.0))
-            * EARTH_CIRCUMFERENCE_METERS
-            / 360.0,
-        (gps_data.lon * f32::powf(10.0, -7.0) - reference.lon * f32::powf(10.0, -7.0))
-            * EARTH_CIRCUMFERENCE_METERS
-            * LAT_FACTOR
-            / 360.0,
-        gps_data.h_msl * f32::powf(10.0, -3.0) - reference.h_msl * f32::powf(10.0, -3.0),
-        gps_data.vel_n * f32::powf(10.0, -3.0),
-        gps_data.vel_e * f32::powf(10.0, -3.0),
-        -gps_data.vel_d * f32::powf(10.0, -3.0),
-    ];
-    let meas: OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec);
-    let accuracy_penality_factor = 100.0;
-    measure_struct.meas = meas;
-    measure_struct.variance_handler.add(meas);
-    measure_struct.meas_variance = measure_struct.variance_handler.get_variance();
-    if gps_data.fix_type != 3 {
-        measure_struct.meas_variance *= accuracy_penality_factor;
-    }
-}
 
-fn on_message_imu(message: Imu, input: &Arc<RwLock<Input>>) {
+fn on_message_imu(message: Imu) -> Input {
     let accel_vec = vec![
         message.linear_accel.x,
         message.linear_accel.y,
         message.linear_accel.z,
     ];
-    let accel = OVector::<f32, U3>::from_iterator(accel_vec);
+    let acceleration = OVector::<f32, U3>::from_iterator(accel_vec);
     let orient_vec = vec![message.euler.x, -message.euler.y, 360.0 - message.euler.z];
-    let orient = OVector::<f32, U3>::from_iterator(orient_vec);
-    let new_input = Input {
-        acceleration: accel,
-        orientation: orient,
-    };
-    write_arc(input, new_input, line!());
+    let orientation = OVector::<f32, U3>::from_iterator(orient_vec);
+    Input {
+        acceleration,
+        orientation,
+    }
 }
 
 fn on_message_gps(
     message: Gps,
     gps_ref_arc: &Arc<RwLock<Gps>>,
-    measure_arc: &Arc<RwLock<Measure>>,
+    measure: &mut Measure,
 ) {
     let gps_ref = read_arc(gps_ref_arc, line!());
-    let mut measure = read_arc(measure_arc, line!());
-
     if gps_ref.fix_type != 3 {
         write_arc(gps_ref_arc, message, line!());
     }
-    set_measure_forom_gps(&message, &gps_ref, &mut measure);
-    write_arc(measure_arc, measure, line!());
+    let meas_vec = vec![
+        (message.lat * f32::powf(10.0, -7.0) - gps_ref.lat * f32::powf(10.0, -7.0))
+            * EARTH_CIRCUMFERENCE_METERS
+            / 360.0,
+        (message.lon * f32::powf(10.0, -7.0) - gps_ref.lon * f32::powf(10.0, -7.0))
+            * EARTH_CIRCUMFERENCE_METERS
+            * LAT_FACTOR
+            / 360.0,
+        message.h_msl * f32::powf(10.0, -3.0) - gps_ref.h_msl * f32::powf(10.0, -3.0),
+        message.vel_n * f32::powf(10.0, -3.0),
+        message.vel_e * f32::powf(10.0, -3.0),
+        -message.vel_d * f32::powf(10.0, -3.0),
+    ];
+    let meas: OVector<f32, U6> = OVector::<f32, U6>::from_iterator(meas_vec);
+    let accuracy_penality_factor = 100.0;
+    measure.meas = meas;
+    measure.variance_handler.add(meas);
+    measure.meas_variance = measure.variance_handler.get_variance();
+    if message.fix_type != 3 {
+        measure.meas_variance *= accuracy_penality_factor;
+    }
 }
 
 // Kalman predict function on new input
@@ -327,13 +322,17 @@ fn angle_unwrap(angle: f32) -> f32 {
 }
 
 fn main() {
-    
+    // Initialize logger
+    env_logger::builder()
+        .filter_level(log::LevelFilter::Info)
+        .format_target(false)
+        .init();
+
     // Defining structures and filter parameters
     let filter_ts = Duration::from_millis(KALMAN_SAMPLE_TIME_MS);
 
     let gps_ref = Gps::default();
     let input = Input::default();
-    let measure = Measure::default();
 
     // Creating ESKF object
     let w_std = 0.001;
@@ -400,7 +399,7 @@ fn main() {
     let noise_state_cov = input_mtx * input_mtx.transpose() * w_std;
     let noise_meas_cov = OMatrix::<f32, U6, U6>::identity();
 
-    let filter = Kalman::<f32, nalgebra::Const<6>, nalgebra::Const<6>, nalgebra::Const<3>> {
+    let mut filter = Kalman::<f32, nalgebra::Const<6>, nalgebra::Const<6>, nalgebra::Const<3>> {
         x: OVector::<f32, U6>::zeros(),
         P: OMatrix::<f32, U6, U6>::identity(),
         F: transition_mtx,
@@ -410,132 +409,36 @@ fn main() {
         R: noise_meas_cov,
         ..Default::default()
     };
-    // Defining Event Channels
-    let (tx, rx) = crossbeam_channel::unbounded();
 
-    // Defining Mutex for thread share
-    let gps_ref_mutex = Arc::new(RwLock::new(gps_ref));
-    let measure_mutex = Arc::new(RwLock::new(measure));
-    let input_mutex = Arc::new(RwLock::new(input));
-    let filter_mutex = Arc::new(RwLock::new(filter));
-
+    // Initialize connection
     // TODO: Add username and password authentication
     let mqqt_opts = MqttOptions::new("sailtrack-kalman", "localhost", 1883);
-    //mqqt_opts.set_credentials("mosquitto", "sailtrack");
-
+    // mqqt_opts.set_credentials("mosquitto", "sailtrack");
     let (client, mut connection) = Client::new(mqqt_opts, 10);
-    client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
     client.subscribe("sensor/imu0", QoS::AtMostOnce).unwrap();
+    client.subscribe("sensor/gps0", QoS::AtMostOnce).unwrap();
 
-    // // MQTT Callbacks thread
-    let gps_ref_clone = Arc::clone(&gps_ref_mutex);
-    let measure_clone = Arc::clone(&measure_mutex);
-    let input_clone = Arc::clone(&input_mutex);
-    thread::spawn(move || {
-        for notification in connection.iter().flatten() {
-            if let Event::Incoming(Incoming::Publish(packet)) = notification {
-                let topic = packet.topic.as_str().to_string(); // Clone the topic for later use
-                match topic.as_str() {
-                    "sensor/imu0" => {
-                        let payload = packet.payload.clone(); // Clone the payload for later use
-                        on_message_imu(
-                            serde_json::from_slice(payload.as_ref()).unwrap(),
-                            &input_clone,
-                        );
-                        match tx.try_send(SyncEvent::ImuReceived) {
-                            Ok(_) => (),
-                            Err(_) => continue,
-                        }
-                    }
-                    "sensor/gps0" => {
-                        let payload = packet.payload.clone(); // Clone the payload for later use
-                        on_message_gps(
-                            serde_json::from_slice(payload.as_ref()).unwrap(),
-                            &gps_ref_clone,
-                            &measure_clone,
-                        );
-                        match tx.try_send(SyncEvent::GpsReceived) {
-                            Ok(_) => (),
-                            Err(_) => continue,
-                        }
-                    }
-                    _ => (),
-                }
-            }
-        }
-    });
+    // Initialize filter
+    let filter_arc = Arc::new(RwLock::new(filter));
+    let gps_ref_arc = Arc::new(RwLock::new(gps_ref));
+    let input_arc = Arc::new(RwLock::new(input));
 
-    // Kalman filter thread
-    let gps_ref_clone = Arc::clone(&gps_ref_mutex);
-    let measure_clone = Arc::clone(&measure_mutex);
-    let input_clone = Arc::clone(&input_mutex);
-    let filter_clone = Arc::clone(&filter_mutex);
-    thread::spawn(move || loop {
-        // Check if the GPS fix has been obtained
-        while gps_ref_clone.read().unwrap().fix_type != 3 {
-            thread::sleep(Duration::from_millis(500));
-        }
-
-        let thread_start = Instant::now();
-        let mut gps_recieved_flag = false;
-        let mut imu_recieved_flag = true;
-        let measure = measure_clone.read().unwrap();
-        let zero_input: Input = Input {
-            acceleration: OVector::<f32, U3>::zeros(),
-            orientation: input.orientation,
-        };
-        let input = input_clone.read().unwrap();
-
-        for _message in rx.try_iter() {
-            match rx.try_recv() {
-                Ok(SyncEvent::GpsReceived) => gps_recieved_flag = true,
-                Ok(SyncEvent::ImuReceived) => imu_recieved_flag = true,
-                Err(_) => (),
-            }
-        }
-
-        let mut filter = read_arc(&filter_clone, line!());
-        match (gps_recieved_flag, imu_recieved_flag) {
-            (true, true) => {
-                filter_predict(&mut filter, &input);
-                filter_update(&mut filter, &measure).unwrap();
-                write_arc(&filter_clone, filter, line!());
-            }
-            (true, false) => {
-                filter_update(&mut filter, &measure).unwrap();
-                write_arc(&filter_clone, filter, line!());
-            }
-            (false, true) => {
-                filter_predict(&mut filter, &input);
-                write_arc(&filter_clone, filter, line!());
-            }
-            (false, false) => {
-                filter_predict(&mut filter, &zero_input);
-                write_arc(&filter_clone, filter, line!());
-            }
-        }
-        let elapsed = thread_start.elapsed();
-        if elapsed.as_millis() < filter_ts.as_millis() {
-            thread::sleep(filter_ts - elapsed);
-        }
-    });
-
-    //MQTT publish loop
-    let gps_ref_clone = Arc::clone(&gps_ref_mutex);
-    let input_clone = Arc::clone(&input_mutex);
-    let filter_clone = Arc::clone(&filter_mutex);
-    loop {
-        let input = read_arc(&input_clone, line!());
+    // Spawn Sender thread
+    let gps_ref_mutex = gps_ref_arc.clone();
+    let input_mutex = input_arc.clone();
+    let filter_mutex = filter_arc.clone();
+    spawn(move || loop {
+        let input = read_arc(&input_mutex, line!());
         let roll = input.orientation.x;
         let pitch = input.orientation.y;
         let heading = input.orientation.z;
 
-        let filter = read_arc(&filter_clone, line!());
+        let filter = read_arc(&filter_mutex, line!());
         let position = filter.x.fixed_rows::<3>(0);
         let velocity = filter.x.fixed_rows::<3>(3);
         
         // Position metrics
-        let gps_ref = read_arc(&gps_ref_clone, line!());
+        let gps_ref = read_arc(&gps_ref_mutex, line!());
         let lat = position.x * 360.0 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR
             + gps_ref.lat * f32::powf(10.0, -7.0);
         let lon: f32 =
@@ -584,6 +487,33 @@ fn main() {
             )
             .unwrap();
 
-        thread::sleep(Duration::from_millis(1000 / MQTT_PUBLISH_FREQ_HZ));
+        sleep(Duration::from_millis(1000 / MQTT_PUBLISH_FREQ_HZ));
+    });
+
+    // Process MQTT events
+    let filter_mutex = filter_arc.clone();
+    let gps_ref_arc = gps_ref_arc.clone();
+    let mut measure = Measure::default();
+    let mut delta = Instant::now();
+    for event in connection.iter() {
+        let event = event.unwrap();
+        debug!("{event:?}");
+        if let Incoming(Publish(message)) = event {
+            if message.topic == "sensor/imu0" {
+                let payload = message.payload.clone();
+                let input = on_message_imu(serde_json::from_slice(payload.as_ref()).unwrap(),);
+                let elapsed = delta.elapsed();
+                info!("Received IMU measurement: {input:?}. Updating filter prediction (delta={}ms)...", elapsed.as_millis());
+                filter_predict(&mut filter, &input);
+                write_arc(&filter_mutex, filter, line!());
+                delta = Instant::now();
+            } else if message.topic == "sensor/gps0" {
+                // FIXME: Correctly extract position and variance from the GPS measurement
+                let gps_measure: Gps = serde_json::from_slice(&message.payload).unwrap();
+                on_message_gps(gps_measure, &gps_ref_arc, &mut measure);
+                info!("Received GPS measurement: {measure:?}. Updating filter observation...");
+                filter_update(&mut filter, &measure).unwrap();
+            }
+        }
     }
 }
