@@ -495,23 +495,24 @@ fn main() {
         }
 
         let mut filter = read_arc(&filter_clone, line!());
+        let filter_clone_write = Arc::clone(&filter_clone);
         match (gps_recieved_flag, imu_recieved_flag) {
             (true, true) => {
                 filter_predict(&mut filter, &input);
                 filter_update(&mut filter, &measure).unwrap();
-                write_arc(&filter_clone, filter, line!());
+                write_arc(&filter_clone_write, filter, line!());
             }
             (true, false) => {
                 filter_update(&mut filter, &measure).unwrap();
-                write_arc(&filter_clone, filter, line!());
+                write_arc(&filter_clone_write, filter, line!());
             }
             (false, true) => {
                 filter_predict(&mut filter, &input);
-                write_arc(&filter_clone, filter, line!());
+                write_arc(&filter_clone_write, filter, line!());
             }
             (false, false) => {
                 filter_predict(&mut filter, &zero_input);
-                write_arc(&filter_clone, filter, line!());
+                write_arc(&filter_clone_write, filter, line!());
             }
         }
         let elapsed = thread_start.elapsed();
@@ -520,22 +521,17 @@ fn main() {
         }
     });
 
+    let filter_pubblish = filter.clone();
     //MQTT publish loop
-    let gps_ref_clone = Arc::clone(&gps_ref_mutex);
-    let input_clone = Arc::clone(&input_mutex);
-    let filter_clone = Arc::clone(&filter_mutex);
     loop {
-        let input = read_arc(&input_clone, line!());
         let roll = input.orientation.x;
         let pitch = input.orientation.y;
         let heading = input.orientation.z;
 
-        let filter = read_arc(&filter_clone, line!());
-        let position = filter.x.fixed_rows::<3>(0);
-        let velocity = filter.x.fixed_rows::<3>(3);
+        let position = filter_pubblish.x.fixed_rows::<3>(0);
+        let velocity = filter_pubblish.x.fixed_rows::<3>(3);
         
         // Position metrics
-        let gps_ref = read_arc(&gps_ref_clone, line!());
         let lat = position.x * 360.0 / EARTH_CIRCUMFERENCE_METERS / LAT_FACTOR
             + gps_ref.lat * f32::powf(10.0, -7.0);
         let lon: f32 =
